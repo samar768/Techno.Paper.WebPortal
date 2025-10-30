@@ -3,7 +3,7 @@
 import type React from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopNav } from "@/components/top-nav";
-//import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/sonner";
 
 export default function DashboardLayout({
   children,
@@ -19,7 +19,7 @@ export default function DashboardLayout({
           <main className="flex-1 p-6">{children}</main>
         </div>
       </div>
-      {/* <Toaster /> */}
+      <Toaster />
     </div>
   )
 }
