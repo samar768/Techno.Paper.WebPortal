@@ -11,7 +11,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-950 via-purple-800 to-purple-600">
+    <div className="min-h-screen bg-linear-to-br from-purple-950 via-purple-800 to-purple-600">
       <div className="flex min-h-screen">
         <AppSidebar />
         <div className="flex-1 flex flex-col ml-64">

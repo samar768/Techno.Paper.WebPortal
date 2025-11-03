@@ -94,7 +94,7 @@ export default function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title} className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+            <Card key={stat.title} className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-white">{stat.title}</CardTitle>
                 <Icon className="h-4 w-4 text-gray-400" />
@@ -123,7 +123,7 @@ export default function DashboardPage() {
       {/* Activity and Alerts */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+        <Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-white">Recent Activity</CardTitle>
           </CardHeader>
@@ -149,13 +149,13 @@ export default function DashboardPage() {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+        <Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-white">Low Stock Alerts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {lowStockAlerts.map((alert, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+              <div key={index} className="flex items-center justify-between p-3 bg-purple-700/50 opacity-80 border-2 border-purple-800 bg-linear-to-br rounded-lg">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-white">{alert.sku}</div>
                   <div className="text-xs text-gray-400">Location: {alert.location}</div>

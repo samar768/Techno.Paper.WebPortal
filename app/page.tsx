@@ -42,7 +42,7 @@ export default function LoginPage() {
         </div>
 
         {/* Sign In Form */}
-        <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+        <Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-white text-xl">Sign In</CardTitle>
           </CardHeader>
@@ -83,7 +83,7 @@ export default function LoginPage() {
         </Card>
 
         {/* Demo Accounts */}
-        <Card className="bg-gray-900/30 border-gray-700 backdrop-blur-sm">
+        <Card className="bg-purple-950/80 border-purple-700 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-white text-sm">Demo Accounts:</CardTitle>
           </CardHeader>

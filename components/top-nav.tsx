@@ -14,7 +14,7 @@ import { Menu } from "lucide-react"
 
 export function TopNav() {
   return (
-    <header className="flex items-center justify-between p-4 bg-gray-900/30 border-b border-gray-700 backdrop-blur-sm">
+    <header className="flex items-center justify-between p-4 bg-purple-950/80 border-purple-700 border-b border-bottom backdrop-blur-sm">
       <div className="flex items-center space-x-4">
         {/* Mobile menu button - for future mobile implementation */}
         <Button variant="ghost" className="text-white hover:bg-purple-600/20 md:hidden">
@@ -31,7 +31,7 @@ export function TopNav() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-gray-900 border-gray-700" align="end" forceMount>
+          <DropdownMenuContent className="w-56 bg-gray-900 border-purple-700" align="end" forceMount>
             <DropdownMenuLabel className="font-normal text-white">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">John Doe</p>
