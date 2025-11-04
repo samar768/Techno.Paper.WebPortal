@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Menu } from 'lucide-react';
 
-export function TopNav() {
+export function TopNav({ collapsed }: { collapsed?: boolean }) {
 	return (
 		<header className="flex items-center justify-between p-4 bg-purple-950/80 border-purple-700 border-b border-bottom backdrop-blur-sm">
 			<div className="flex items-center space-x-4">
