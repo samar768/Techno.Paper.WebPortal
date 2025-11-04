@@ -308,8 +308,6 @@ export default function InventoryPage() {
 	const [statusFilter, setStatusFilter] = useState('all');
 	const [locationFilter, setLocationFilter] = useState('all');
 	const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-	// Removed edit modal state; navigation will be used instead
-	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState<string>('');
 	const { toast } = useToast();
@@ -424,18 +422,8 @@ export default function InventoryPage() {
 	// Removed handleSaveEdit; editing now happens on dedicated page in future
 
 	const handleAddNew = useCallback(() => {
-		setEditingItem({
-			sku: '',
-			weight: 0,
-			dimensions: '',
-			material: '',
-			productionDate: '',
-			location: '',
-			status: 'In Stock',
-			qrCode: '',
-		});
-		setIsAddModalOpen(true);
-	}, []);
+		router.push('/dashboard/sale-order/new');
+	}, [router]);
 
 	const handleSaveNew = useCallback(() => {
 		if (editingItem) {
@@ -693,14 +681,7 @@ export default function InventoryPage() {
 
 			{/* Edit now navigates to detail page */}
 
-			<EditModal
-				isOpen={isAddModalOpen}
-				onClose={() => setIsAddModalOpen(false)}
-				onSave={handleSaveNew}
-				title="Add New Paper Roll"
-				editingItem={editingItem}
-				onInputChange={handleInputChange}
-			/>
+			{/* Add flow now navigates to /dashboard/sale-order/new */}
 
 			<DeleteModal
 				isOpen={isDeleteModalOpen}
