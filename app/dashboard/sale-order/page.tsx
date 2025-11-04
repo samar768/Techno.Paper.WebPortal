@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,8 @@ interface InventoryItem {
 	qrCode: string;
 }
 
+// Removed large modal; using a dedicated detail page instead
+
 // Move EditModal outside to prevent re-creation
 const EditModal = ({
 	isOpen,
@@ -59,10 +62,7 @@ const EditModal = ({
 }) => {
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent
-				className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-2xl backdrop-blur-sm"
-				overlayClassName="backdrop-blur-sm bg-black/20"
-			>
+			<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-2xl backdrop-blur-sm">
 				<DialogHeader>
 					<DialogTitle className="text-white">{title}</DialogTitle>
 				</DialogHeader>
@@ -267,10 +267,7 @@ const DeleteModal = ({
 }) => {
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent
-				className="bg-gradient-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-md backdrop-blur-sm"
-				overlayClassName="backdrop-blur-sm bg-black/20"
-			>
+			<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-md backdrop-blur-sm">
 				<DialogHeader>
 					<DialogTitle className="text-white">
 						Delete Paper Roll
@@ -306,11 +303,12 @@ const DeleteModal = ({
 };
 
 export default function InventoryPage() {
+	const router = useRouter();
 	const [searchTerm, setSearchTerm] = useState('');
 	const [statusFilter, setStatusFilter] = useState('all');
 	const [locationFilter, setLocationFilter] = useState('all');
 	const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+	// Removed edit modal state; navigation will be used instead
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState<string>('');
@@ -395,10 +393,14 @@ export default function InventoryPage() {
 		[]
 	);
 
-	const handleEdit = useCallback((item: InventoryItem) => {
-		setEditingItem({ ...item });
-		setIsEditModalOpen(true);
-	}, []);
+	const handleEdit = useCallback(
+		(item: InventoryItem) => {
+			router.push(
+				`/dashboard/sale-order/${encodeURIComponent(item.sku)}`
+			);
+		},
+		[router]
+	);
 
 	const handleDelete = useCallback((sku: string) => {
 		setItemToDelete(sku);
@@ -419,33 +421,7 @@ export default function InventoryPage() {
 		});
 	}, [itemToDelete, toast]);
 
-	const handleSaveEdit = useCallback(() => {
-		if (editingItem) {
-			const errors = validateItem(editingItem);
-			if (errors.length > 0) {
-				toast({
-					title: 'Validation Error',
-					description: errors.join('\n'),
-					variant: 'destructive',
-				});
-				return;
-			}
-
-			setInventory((prev) =>
-				prev.map((item) =>
-					item.sku === editingItem.sku ? editingItem : item
-				)
-			);
-			setIsEditModalOpen(false);
-			setEditingItem(null);
-
-			toast({
-				title: 'Paper roll updated',
-				description: `${editingItem.sku} has been successfully updated.`,
-				className: 'bg-green-600 text-white border-green-700',
-			});
-		}
-	}, [editingItem, toast]);
+	// Removed handleSaveEdit; editing now happens on dedicated page in future
 
 	const handleAddNew = useCallback(() => {
 		setEditingItem({
@@ -715,14 +691,7 @@ export default function InventoryPage() {
 				</CardContent>
 			</Card>
 
-			<EditModal
-				isOpen={isEditModalOpen}
-				onClose={() => setIsEditModalOpen(false)}
-				onSave={handleSaveEdit}
-				title="Edit Paper Roll"
-				editingItem={editingItem}
-				onInputChange={handleInputChange}
-			/>
+			{/* Edit now navigates to detail page */}
 
 			<EditModal
 				isOpen={isAddModalOpen}
