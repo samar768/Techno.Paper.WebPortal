@@ -31,7 +31,7 @@ export default function DashboardLayout({
 					<main className="flex-1 p-6">{children}</main>
 				</div>
 			</div>
-			<Toaster />
+			<Toaster richColors />
 		</div>
 	);
 }

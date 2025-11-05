@@ -27,8 +27,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Edit, Search, Plus, Trash2 } from 'lucide-react';
 
 interface InventoryItem {
@@ -99,7 +98,6 @@ export default function InventoryPage() {
 	const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState<string>('');
-	const { toast } = useToast();
 
 	const [inventory, setInventory] = useState<InventoryItem[]>([
 		{
@@ -201,11 +199,7 @@ export default function InventoryPage() {
 		setIsDeleteModalOpen(false);
 		setItemToDelete('');
 
-		toast({
-			title: 'Paper roll deleted',
-			description: `${itemToDelete} has been successfully deleted.`,
-			className: 'bg-green-600 text-white border-green-700',
-		});
+		toast.success(`${itemToDelete} has been successfully deleted.`);
 	}, [itemToDelete, toast]);
 
 	// Removed handleSaveEdit; editing now happens on dedicated page in future
@@ -218,32 +212,22 @@ export default function InventoryPage() {
 		if (editingItem) {
 			const errors = validateItem(editingItem);
 			if (errors.length > 0) {
-				toast({
-					title: 'Validation Error',
-					description: errors.join('\n'),
-					variant: 'destructive',
-				});
+				toast.error(errors.join('\n'));
 				return;
 			}
 
 			// Check for duplicate SKU
 			if (inventory.some((item) => item.sku === editingItem.sku)) {
-				toast({
-					title: 'Validation Error',
-					description: 'SKU already exists. Please use a unique SKU.',
-					variant: 'destructive',
-				});
+				toast.error('SKU already exists. Please use a unique SKU.');
 				return;
 			}
 
 			setInventory((prev) => [...prev, editingItem]);
 			setEditingItem(null);
 
-			toast({
-				title: 'Paper roll added',
-				description: `${editingItem.sku} has been successfully added to inventory.`,
-				className: 'bg-green-600 text-white border-green-700',
-			});
+			toast.success(
+				`${editingItem.sku} has been successfully added to inventory.`
+			);
 		}
 	}, [editingItem, inventory, toast]);
 

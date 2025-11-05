@@ -8,12 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { toast } from 'sonner';
 
 export default function NewSaleOrderPage() {
 	const router = useRouter();
-	const { toast } = useToast();
 
 	// Simple local state for all text fields (mock capture only)
 	const [form, setForm] = useState({
@@ -80,11 +86,7 @@ export default function NewSaleOrderPage() {
 	const handleCancel = () => router.push('/dashboard/sale-order');
 
 	const handleSave = () => {
-		toast({
-			title: 'Sale order captured',
-			description: 'Your entry was captured (mock). Returning to list...',
-			className: 'bg-green-600 text-white border-green-700',
-		});
+		toast.success('Your entry was captured (mock). Returning to list...');
 		router.push('/dashboard/sale-order');
 	};
 
@@ -109,7 +111,9 @@ export default function NewSaleOrderPage() {
 
 			<Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
 				<CardHeader>
-					<CardTitle className="text-white">New Sales Order</CardTitle>
+					<CardTitle className="text-white">
+						New Sales Order
+					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{/* Header fields */}
@@ -119,38 +123,106 @@ export default function NewSaleOrderPage() {
 							<div className="grid grid-cols-3 gap-2 items-center">
 								<Label className="text-gray-300">Type</Label>
 								<div className="col-span-2">
-									<Input value={form.type} onChange={(e) => handleChange('type', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.type}
+										onChange={(e) =>
+											handleChange('type', e.target.value)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Order No.</Label>
+								<Label className="text-gray-300">
+									Order No.
+								</Label>
 								<div className="col-span-2 grid grid-cols-2 gap-2">
-									<Input value={form.orderNo} onChange={(e) => handleChange('orderNo', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
-									<Input value={form.orderDate} onChange={(e) => handleChange('orderDate', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.orderNo}
+										onChange={(e) =>
+											handleChange(
+												'orderNo',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
+									<Input
+										value={form.orderDate}
+										onChange={(e) =>
+											handleChange(
+												'orderDate',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
 								<Label className="text-gray-300">Party</Label>
 								<div className="col-span-2">
-									<Input value={form.party} onChange={(e) => handleChange('party', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.party}
+										onChange={(e) =>
+											handleChange(
+												'party',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Distributor</Label>
+								<Label className="text-gray-300">
+									Distributor
+								</Label>
 								<div className="col-span-2">
-									<Input value={form.distributor} onChange={(e) => handleChange('distributor', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.distributor}
+										onChange={(e) =>
+											handleChange(
+												'distributor',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Amendment Order</Label>
+								<Label className="text-gray-300">
+									Amendment Order
+								</Label>
 								<div className="col-span-2">
-									<Input value={form.remark} onChange={(e) => handleChange('remark', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.remark}
+										onChange={(e) =>
+											handleChange(
+												'remark',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Sale V_Type</Label>
+								<Label className="text-gray-300">
+									Sale V_Type
+								</Label>
 								<div className="col-span-2">
-									<Input value={'Con. Ref No.'} onChange={(e) => handleChange('saleVType' as any, e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={'Con. Ref No.'}
+										onChange={(e) =>
+											handleChange(
+												'saleVType' as any,
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 						</div>
@@ -158,41 +230,125 @@ export default function NewSaleOrderPage() {
 						{/* Right column */}
 						<div className="space-y-2">
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Party Order No.</Label>
+								<Label className="text-gray-300">
+									Party Order No.
+								</Label>
 								<div className="col-span-2">
-									<Input value={form.partyOrderNo} onChange={(e) => handleChange('partyOrderNo', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.partyOrderNo}
+										onChange={(e) =>
+											handleChange(
+												'partyOrderNo',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Against Form</Label>
+								<Label className="text-gray-300">
+									Against Form
+								</Label>
 								<div className="col-span-2">
-									<Input value={form.againstForm} onChange={(e) => handleChange('againstForm', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.againstForm}
+										onChange={(e) =>
+											handleChange(
+												'againstForm',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Delivery To</Label>
+								<Label className="text-gray-300">
+									Delivery To
+								</Label>
 								<div className="col-span-2">
-									<Input value={form.deliveryTo} onChange={(e) => handleChange('deliveryTo', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.deliveryTo}
+										onChange={(e) =>
+											handleChange(
+												'deliveryTo',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Delivery Date</Label>
+								<Label className="text-gray-300">
+									Delivery Date
+								</Label>
 								<div className="col-span-2 grid grid-cols-2 gap-2">
-									<Input value={form.deliveryDate} onChange={(e) => handleChange('deliveryDate', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
-									<Input value={form.orderType} onChange={(e) => handleChange('orderType', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.deliveryDate}
+										onChange={(e) =>
+											handleChange(
+												'deliveryDate',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
+									<Input
+										value={form.orderType}
+										onChange={(e) =>
+											handleChange(
+												'orderType',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">Consignee</Label>
+								<Label className="text-gray-300">
+									Consignee
+								</Label>
 								<div className="col-span-2">
-									<Input value={form.consignee} onChange={(e) => handleChange('consignee', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.consignee}
+										onChange={(e) =>
+											handleChange(
+												'consignee',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 							<div className="grid grid-cols-3 gap-2 items-center">
-								<Label className="text-gray-300">To Place</Label>
+								<Label className="text-gray-300">
+									To Place
+								</Label>
 								<div className="col-span-2 grid grid-cols-2 gap-2">
-									<Input value={form.toPlace} onChange={(e) => handleChange('toPlace', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
-									<Input value={form.partyDate} onChange={(e) => handleChange('partyDate', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+									<Input
+										value={form.toPlace}
+										onChange={(e) =>
+											handleChange(
+												'toPlace',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
+									<Input
+										value={form.partyDate}
+										onChange={(e) =>
+											handleChange(
+												'partyDate',
+												e.target.value
+											)
+										}
+										className="bg-purple-950/80 border-purple-700 text-white"
+									/>
 								</div>
 							</div>
 						</div>
@@ -224,7 +380,10 @@ export default function NewSaleOrderPage() {
 										'OH',
 										'Ad',
 									].map((h) => (
-										<TableHead key={h} className="text-gray-300 whitespace-nowrap">
+										<TableHead
+											key={h}
+											className="text-gray-300 whitespace-nowrap"
+										>
 											{h}
 										</TableHead>
 									))}
@@ -232,26 +391,247 @@ export default function NewSaleOrderPage() {
 							</TableHeader>
 							<TableBody>
 								{rows.map((row, idx) => (
-									<TableRow key={row.sn} className="border-gray-700">
-										<TableCell className="text-gray-200">{row.sn}</TableCell>
-										<TableCell className="text-gray-300"><Input value={row.itemName} onChange={(e) => handleRowChange(idx, 'itemName', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.description} onChange={(e) => handleRowChange(idx, 'description', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.bf} onChange={(e) => handleRowChange(idx, 'bf', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.width} onChange={(e) => handleRowChange(idx, 'width', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.length} onChange={(e) => handleRowChange(idx, 'length', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.unit} onChange={(e) => handleRowChange(idx, 'unit', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.grain} onChange={(e) => handleRowChange(idx, 'grain', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.gsm} onChange={(e) => handleRowChange(idx, 'gsm', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.reelPack} onChange={(e) => handleRowChange(idx, 'reelPack', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.weightSecUnit} onChange={(e) => handleRowChange(idx, 'weightSecUnit', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.secUnit} onChange={(e) => handleRowChange(idx, 'secUnit', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.weightSku} onChange={(e) => handleRowChange(idx, 'weightSku', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.tol} onChange={(e) => handleRowChange(idx, 'tol', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.skuUnit} onChange={(e) => handleRowChange(idx, 'skuUnit', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.rate} onChange={(e) => handleRowChange(idx, 'rate', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.amount} onChange={(e) => handleRowChange(idx, 'amount', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.oh} onChange={(e) => handleRowChange(idx, 'oh', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
-										<TableCell className="text-gray-300"><Input value={row.ad} onChange={(e) => handleRowChange(idx, 'ad', e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" /></TableCell>
+									<TableRow
+										key={row.sn}
+										className="border-gray-700"
+									>
+										<TableCell className="text-gray-200">
+											{row.sn}
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.itemName}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'itemName',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.description}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'description',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.bf}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'bf',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.width}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'width',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.length}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'length',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.unit}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'unit',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.grain}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'grain',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.gsm}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'gsm',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.reelPack}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'reelPack',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.weightSecUnit}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'weightSecUnit',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.secUnit}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'secUnit',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.weightSku}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'weightSku',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.tol}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'tol',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.skuUnit}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'skuUnit',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.rate}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'rate',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.amount}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'amount',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.oh}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'oh',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
+										<TableCell className="text-gray-300">
+											<Input
+												value={row.ad}
+												onChange={(e) =>
+													handleRowChange(
+														idx,
+														'ad',
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
+										</TableCell>
 									</TableRow>
 								))}
 							</TableBody>
@@ -261,8 +641,12 @@ export default function NewSaleOrderPage() {
 					{/* Totals strip */}
 					<div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-sm">
 						<div className="text-gray-200">Total</div>
-						<div className="text-gray-200">Quantity : {form.totalQty}</div>
-						<div className="text-gray-200">Weight : {form.totalWeight}</div>
+						<div className="text-gray-200">
+							Quantity : {form.totalQty}
+						</div>
+						<div className="text-gray-200">
+							Weight : {form.totalWeight}
+						</div>
 					</div>
 
 					{/* Bottom panels */}
@@ -278,17 +662,33 @@ export default function NewSaleOrderPage() {
 									['Remark', 'remark'],
 									['Delivery', 'delivery'],
 								].map(([label, key]) => (
-									<div key={String(key)} className="grid grid-cols-2 gap-2 px-3 py-2">
-										<div className="text-gray-300">{label}</div>
+									<div
+										key={String(key)}
+										className="grid grid-cols-2 gap-2 px-3 py-2"
+									>
+										<div className="text-gray-300">
+											{label}
+										</div>
 										<div className="text-gray-100">
-											<Input value={(form as any)[key]} onChange={(e) => handleChange(String(key), e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+											<Input
+												value={(form as any)[key]}
+												onChange={(e) =>
+													handleChange(
+														String(key),
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
 										</div>
 									</div>
 								))}
 							</div>
 						</div>
 						<div className="rounded-lg border border-purple-800">
-							<div className="bg-gray-800/50 px-3 py-2 border-b border-purple-800 text-gray-200">Heads</div>
+							<div className="bg-gray-800/50 px-3 py-2 border-b border-purple-800 text-gray-200">
+								Heads
+							</div>
 							<div className="divide-y divide-purple-800/60">
 								{[
 									['Gross Amount', 'headGrossAmount'],
@@ -296,11 +696,27 @@ export default function NewSaleOrderPage() {
 									['Round Off', 'headRoundOff'],
 									['Net Amount', 'headNetAmount'],
 								].map(([label, key]) => (
-									<div key={String(label)} className="grid grid-cols-3 gap-2 px-3 py-2">
-										<div className="text-gray-300">{label}</div>
-										<div className="text-gray-300">0.000</div>
+									<div
+										key={String(label)}
+										className="grid grid-cols-3 gap-2 px-3 py-2"
+									>
+										<div className="text-gray-300">
+											{label}
+										</div>
+										<div className="text-gray-300">
+											0.000
+										</div>
 										<div className="text-gray-100">
-											<Input value={(form as any)[key]} onChange={(e) => handleChange(String(key), e.target.value)} className="bg-purple-950/80 border-purple-700 text-white" />
+											<Input
+												value={(form as any)[key]}
+												onChange={(e) =>
+													handleChange(
+														String(key),
+														e.target.value
+													)
+												}
+												className="bg-purple-950/80 border-purple-700 text-white"
+											/>
 										</div>
 									</div>
 								))}
@@ -317,7 +733,10 @@ export default function NewSaleOrderPage() {
 						>
 							Cancel
 						</Button>
-						<Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
+						<Button
+							onClick={handleSave}
+							className="bg-purple-600 hover:bg-purple-700"
+						>
 							Save
 						</Button>
 					</div>
@@ -326,5 +745,3 @@ export default function NewSaleOrderPage() {
 		</div>
 	);
 }
-
-
