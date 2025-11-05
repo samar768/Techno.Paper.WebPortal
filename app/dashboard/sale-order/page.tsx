@@ -42,217 +42,6 @@ interface InventoryItem {
 	qrCode: string;
 }
 
-// Removed large modal; using a dedicated detail page instead
-
-// Move EditModal outside to prevent re-creation
-const EditModal = ({
-	isOpen,
-	onClose,
-	onSave,
-	title,
-	editingItem,
-	onInputChange,
-}: {
-	isOpen: boolean;
-	onClose: () => void;
-	onSave: () => void;
-	title: string;
-	editingItem: InventoryItem | null;
-	onInputChange: (field: string, value: string | number) => void;
-}) => {
-	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-2xl backdrop-blur-sm">
-				<DialogHeader>
-					<DialogTitle className="text-white">{title}</DialogTitle>
-				</DialogHeader>
-				{editingItem && (
-					<div className="space-y-4">
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label
-									htmlFor="edit-sku"
-									className="text-gray-300"
-								>
-									SKU
-								</Label>
-								<Input
-									id="edit-sku"
-									value={editingItem.sku}
-									onChange={(e) =>
-										onInputChange('sku', e.target.value)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label
-									htmlFor="edit-weight"
-									className="text-gray-300"
-								>
-									Weight (kg)
-								</Label>
-								<Input
-									id="edit-weight"
-									type="number"
-									value={String(editingItem.weight)}
-									onChange={(e) =>
-										onInputChange(
-											'weight',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-						</div>
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label
-									htmlFor="edit-dimensions"
-									className="text-gray-300"
-								>
-									Dimensions
-								</Label>
-								<Input
-									id="edit-dimensions"
-									value={editingItem.dimensions}
-									onChange={(e) =>
-										onInputChange(
-											'dimensions',
-											e.target.value
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label
-									htmlFor="edit-material"
-									className="text-gray-300"
-								>
-									Material
-								</Label>
-								<Select
-									value={editingItem.material}
-									onValueChange={(value) =>
-										onInputChange('material', value)
-									}
-								>
-									<SelectTrigger className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent className="bg-gray-800 border-gray-600 text-white">
-										<SelectItem
-											value="Kraft Paper"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											Kraft Paper
-										</SelectItem>
-										<SelectItem
-											value="Newsprint"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											Newsprint
-										</SelectItem>
-										<SelectItem
-											value="Coated Paper"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											Coated Paper
-										</SelectItem>
-										<SelectItem
-											value="Cardboard"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											Cardboard
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label
-									htmlFor="edit-location"
-									className="text-gray-300"
-								>
-									Location
-								</Label>
-								<Input
-									id="edit-location"
-									value={editingItem.location}
-									onChange={(e) =>
-										onInputChange(
-											'location',
-											e.target.value
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label
-									htmlFor="edit-status"
-									className="text-gray-300"
-								>
-									Status
-								</Label>
-								<Select
-									value={editingItem.status}
-									onValueChange={(value) =>
-										onInputChange('status', value)
-									}
-								>
-									<SelectTrigger className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent className="bg-gray-800 border-gray-600 text-white">
-										<SelectItem
-											value="In Stock"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											In Stock
-										</SelectItem>
-										<SelectItem
-											value="Reserved"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											Reserved
-										</SelectItem>
-										<SelectItem
-											value="Dispatched"
-											className="text-white hover:bg-gray-700 focus:bg-gray-700"
-										>
-											Dispatched
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-						<div className="flex justify-end space-x-2 pt-4">
-							<Button
-								variant="outline"
-								onClick={onClose}
-								className="border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400 bg-gray-800"
-							>
-								Cancel
-							</Button>
-							<Button
-								onClick={onSave}
-								className="bg-purple-600 hover:bg-purple-700"
-							>
-								Save Changes
-							</Button>
-						</div>
-					</div>
-				)}
-			</DialogContent>
-		</Dialog>
-	);
-};
-
 // Delete Confirmation Modal
 const DeleteModal = ({
 	isOpen,
@@ -448,7 +237,6 @@ export default function InventoryPage() {
 			}
 
 			setInventory((prev) => [...prev, editingItem]);
-			setIsAddModalOpen(false);
 			setEditingItem(null);
 
 			toast({
@@ -507,7 +295,7 @@ export default function InventoryPage() {
 						<div className="relative flex-1">
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
 							<Input
-								placeholder="Search by SKU or material..."
+								placeholder="Search by Document ID or Party Name..."
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
 								className="pl-10 bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
@@ -517,67 +305,33 @@ export default function InventoryPage() {
 							value={statusFilter}
 							onValueChange={setStatusFilter}
 						>
-							<SelectTrigger className="w-full sm:w-[180px] bg-gray-800 border-gray-600 text-white focus:ring-2 focus:ring-purple-500">
+							<SelectTrigger className="w-full sm:w-[180px] bg-purple-800/50 border-purple-700 text-white focus:ring-2 focus:ring-purple-500">
 								<SelectValue placeholder="All Statuses" />
 							</SelectTrigger>
-							<SelectContent className="bg-gray-800 border-gray-600 text-white">
+							<SelectContent className="bg-purple-900 border-purple-700 text-white">
 								<SelectItem
 									value="all"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
+									className="text-white hover:bg-purple-600/30 focus:bg-purple-400/30 focus:text-white"
 								>
 									All Statuses
 								</SelectItem>
 								<SelectItem
 									value="in-stock"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
+									className="text-white hover:bg-purple-600/30 focus:bg-purple-400/30 focus:text-white"
 								>
 									In Stock
 								</SelectItem>
 								<SelectItem
 									value="reserved"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
+									className="text-white hover:bg-purple-600/30 focus:bg-purple-400/30 focus:text-white"
 								>
 									Reserved
 								</SelectItem>
 								<SelectItem
 									value="dispatched"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
+									className="text-white hover:bg-purple-600/30 focus:bg-purple-400/30 focus:text-white"
 								>
 									Dispatched
-								</SelectItem>
-							</SelectContent>
-						</Select>
-						<Select
-							value={locationFilter}
-							onValueChange={setLocationFilter}
-						>
-							<SelectTrigger className="w-full sm:w-[180px] bg-gray-800 border-gray-600 text-white focus:ring-2 focus:ring-purple-500">
-								<SelectValue placeholder="All Locations" />
-							</SelectTrigger>
-							<SelectContent className="bg-gray-800 border-gray-600 text-white">
-								<SelectItem
-									value="all"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
-								>
-									All Locations
-								</SelectItem>
-								<SelectItem
-									value="a"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
-								>
-									Zone A
-								</SelectItem>
-								<SelectItem
-									value="b"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
-								>
-									Zone B
-								</SelectItem>
-								<SelectItem
-									value="c"
-									className="text-white hover:bg-gray-700 focus:bg-gray-700"
-								>
-									Zone C
 								</SelectItem>
 							</SelectContent>
 						</Select>
