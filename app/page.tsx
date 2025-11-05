@@ -1,65 +1,125 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+export default function LoginPage() {
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+
+	const demoAccounts = [
+		{ role: 'Admin', email: 'admin@paperops.com' },
+		{ role: 'Warehouse Manager', email: 'manager@paperops.com' },
+		{ role: 'Driver', email: 'driver@paperops.com' },
+		{ role: 'Viewer', email: 'viewer@paperops.com' },
+	];
+
+	const handleDemoLogin = (demoEmail: string) => {
+		setEmail(demoEmail);
+		setPassword('demo123');
+	};
+
+	const handleSignIn = () => {
+		// Redirect to dashboard for demo purposes
+		window.location.href = '/dashboard';
+	};
+
+	return (
+		<div className="min-h-screen bg-linear-to-br from-purple-950 via-purple-800 to-purple-600 flex items-center justify-center p-4">
+			<div className="w-full max-w-md space-y-8">
+				{/* Logo and Branding */}
+				<div className="text-center space-y-4">
+					<div className="mx-auto w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center">
+						<span className="text-white font-bold text-xl">PS</span>
+					</div>
+					<div>
+						<h1 className="text-3xl font-bold text-white">
+							PaperSoft
+						</h1>
+						<p className="text-purple-200 text-sm">
+							Paper Roll Management System
+						</p>
+					</div>
+				</div>
+
+				{/* Sign In Form */}
+				<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
+					<CardHeader className="text-center">
+						<CardTitle className="text-white text-xl">
+							Sign In
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="space-y-2">
+							<Label htmlFor="email" className="text-gray-300">
+								Email
+							</Label>
+							<Input
+								id="email"
+								type="email"
+								placeholder="Enter your email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="password" className="text-gray-300">
+								Password
+							</Label>
+							<Input
+								id="password"
+								type="password"
+								placeholder="Enter your password"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+							/>
+						</div>
+						<Button
+							onClick={handleSignIn}
+							className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+						>
+							Sign In
+						</Button>
+						<p className="text-center text-gray-400 text-sm">
+							Need an account?{' '}
+							<span className="text-purple-400 cursor-pointer">
+								Sign up
+							</span>
+						</p>
+					</CardContent>
+				</Card>
+
+				{/* Demo Accounts */}
+				<Card className="bg-purple-950/80 border-purple-700 backdrop-blur-sm">
+					<CardHeader>
+						<CardTitle className="text-white text-sm">
+							Demo Accounts:
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						{demoAccounts.map((account) => (
+							<div key={account.role} className="space-y-1">
+								<div className="text-white font-medium text-sm">
+									{account.role}
+								</div>
+								<div
+									className="text-gray-400 text-sm cursor-pointer hover:text-purple-400 transition-colors"
+									onClick={() =>
+										handleDemoLogin(account.email)
+									}
+								>
+									{account.email}
+								</div>
+							</div>
+						))}
+					</CardContent>
+				</Card>
+			</div>
+		</div>
+	);
 }
