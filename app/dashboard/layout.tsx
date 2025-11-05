@@ -16,7 +16,7 @@ export default function DashboardLayout({
 	const [collapsed, setCollapsed] = useState(false);
 
 	return (
-		<div className="min-h-screen bg-linear-to-br from-purple-950 via-purple-800 to-purple-600">
+		<div className="min-h-screen min-w-screen w-max bg-linear-to-br from-purple-950 via-purple-800 to-purple-600">
 			<div className="flex min-h-screen">
 				<AppSidebar
 					collapsed={collapsed}
