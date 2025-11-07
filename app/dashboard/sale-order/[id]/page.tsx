@@ -18,6 +18,7 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import SalesOrderHeader from '@/features/sales-order/SalesOrderHeader';
+import SalesOrderDetails from '@/features/sales-order/SalesOrderDetails';
 
 export default function SaleOrderDetailPage() {
 	const params = useParams();
@@ -56,6 +57,8 @@ export default function SaleOrderDetailPage() {
 	return (
 		<>
 			<SalesOrderHeader />
+			<br />
+			<SalesOrderDetails />
 		</>
 	);
 }

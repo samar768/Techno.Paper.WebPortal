@@ -121,7 +121,7 @@ export default function SalesOrderHeader() {
 				</div>
 			</div>
 
-			<Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+			<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
 				<CardHeader>
 					<CardTitle className="text-white text-xl">
 						Sales Order Header Details
