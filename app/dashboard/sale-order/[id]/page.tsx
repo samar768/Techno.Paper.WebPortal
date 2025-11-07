@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/table';
 import SalesOrderHeader from '@/features/sales-order/SalesOrderHeader';
 import SalesOrderDetails from '@/features/sales-order/SalesOrderDetails';
+import SalesOrderTermsConditions from '@/features/sales-order/SalesOrderTermsConditions';
+import SalesOrderExpenses from '@/features/sales-order/SalesOrderExpenses';
 
 export default function SaleOrderDetailPage() {
 	const params = useParams();
@@ -59,6 +61,11 @@ export default function SaleOrderDetailPage() {
 			<SalesOrderHeader />
 			<br />
 			<SalesOrderDetails />
+			<br />
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+				<SalesOrderTermsConditions />
+				<SalesOrderExpenses />
+			</div>
 		</>
 	);
 }
