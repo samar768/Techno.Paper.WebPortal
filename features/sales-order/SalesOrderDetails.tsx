@@ -83,9 +83,11 @@ export default function SalesOrderDetails() {
 		{ ...defaultLine, reelPerPack: 3, weightSku: 1700, rate: 25 },
 	]);
 
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [editingIndex, setEditingIndex] = useState<number | null>(null);
-	const [draft, setDraft] = useState<SalesOrderLine>(defaultLine);
+	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+	const [addDraft, setAddDraft] = useState<SalesOrderLine>(defaultLine);
+
+	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+	const [editingDraft, setEditingDraft] = useState<SalesOrderLine | null>(null);
 
 	const totals = useMemo(() => {
 		const totalQuantity = lines.reduce(
@@ -106,16 +108,14 @@ export default function SalesOrderDetails() {
 	}, []);
 
 	const openAdd = useCallback(() => {
-		setEditingIndex(null);
-		setDraft({ ...defaultLine });
-		setIsModalOpen(true);
+		setAddDraft({ ...defaultLine });
+		setIsAddModalOpen(true);
 	}, []);
 
 	const openEdit = useCallback(
 		(idx: number) => {
-			setEditingIndex(idx);
-			setDraft({ ...lines[idx] });
-			setIsModalOpen(true);
+			setEditingRowIndex(idx);
+			setEditingDraft({ ...lines[idx] });
 		},
 		[lines]
 	);
@@ -124,25 +124,41 @@ export default function SalesOrderDetails() {
 		setLines((prev) => prev.filter((_, i) => i !== idx));
 	}, []);
 
-	const updateDraft = useCallback(
+	const updateAddDraft = useCallback(
 		(field: keyof SalesOrderLine, value: string | number) => {
-			setDraft((prev) => ({ ...prev, [field]: value as never }));
+			setAddDraft((prev) => ({ ...prev, [field]: value as never }));
 		},
 		[]
 	);
 
-	const saveDraft = useCallback(() => {
-		const newLine = { ...draft };
-		if (editingIndex === null) {
-			setLines((prev) => [...prev, newLine]);
-		} else {
+	const saveAdd = useCallback(() => {
+		const newLine = { ...addDraft };
+		setLines((prev) => [...prev, newLine]);
+		setIsAddModalOpen(false);
+		setAddDraft({ ...defaultLine });
+	}, [addDraft]);
+
+	const saveEdit = useCallback(() => {
+		if (editingRowIndex !== null && editingDraft) {
 			setLines((prev) =>
-				prev.map((l, i) => (i === editingIndex ? newLine : l))
+				prev.map((l, i) => (i === editingRowIndex ? { ...editingDraft } : l))
 			);
 		}
-		setIsModalOpen(false);
-		setEditingIndex(null);
-	}, [draft, editingIndex]);
+		setEditingRowIndex(null);
+		setEditingDraft(null);
+	}, [editingRowIndex, editingDraft]);
+
+	const cancelEdit = useCallback(() => {
+		setEditingRowIndex(null);
+		setEditingDraft(null);
+	}, []);
+
+	const updateEditingDraft = useCallback(
+		(field: keyof SalesOrderLine, value: string | number) => {
+			setEditingDraft((prev) => prev ? { ...prev, [field]: value as never } : null);
+		},
+		[]
+	);
 
 	return (
 		<div className="space-y-4">
@@ -222,67 +238,289 @@ export default function SalesOrderDetails() {
 											{idx + 1}
 										</TableCell>
 										<TableCell className="text-gray-200">
-											{line.itemName}
+											{editingRowIndex === idx ? (
+												<Select
+													value={editingDraft!.itemName}
+													onValueChange={(v) =>
+														updateEditingDraft('itemName', v)
+													}
+												>
+													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-200 focus:ring-0 focus:ring-offset-0 p-0">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
+														<SelectItem value="Kraft Paper">
+															Kraft Paper
+														</SelectItem>
+														<SelectItem value="Newsprint">
+															Newsprint
+														</SelectItem>
+														<SelectItem value="Coated Paper">
+															Coated Paper
+														</SelectItem>
+														<SelectItem value="Cardboard">
+															Cardboard
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											) : (
+												line.itemName
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.bf}
+											{editingRowIndex === idx ? (
+												<Select
+													value={editingDraft!.bf}
+													onValueChange={(v) => updateEditingDraft('bf', v)}
+												>
+													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
+														<SelectItem value="14">14</SelectItem>
+														<SelectItem value="16">16</SelectItem>
+														<SelectItem value="18">18</SelectItem>
+														<SelectItem value="20">20</SelectItem>
+														<SelectItem value="22">22</SelectItem>
+													</SelectContent>
+												</Select>
+											) : (
+												line.bf
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.width.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													step="0.01"
+													value={editingDraft!.width}
+													onChange={(e) =>
+														updateEditingDraft(
+															'width',
+															Number.parseFloat(e.target.value) ||
+																0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.width.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.length.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													step="0.01"
+													value={editingDraft!.length}
+													onChange={(e) =>
+														updateEditingDraft(
+															'length',
+															Number.parseFloat(e.target.value) ||
+																0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.length.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.unit}
+											{editingRowIndex === idx ? (
+												<Select
+													value={editingDraft!.unit}
+													onValueChange={(v) =>
+														updateEditingDraft('unit', v)
+													}
+												>
+													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
+														<SelectItem value="CM">CM</SelectItem>
+														<SelectItem value="IN">IN</SelectItem>
+														<SelectItem value="MM">MM</SelectItem>
+													</SelectContent>
+												</Select>
+											) : (
+												line.unit
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.gsm}
+											{editingRowIndex === idx ? (
+												<Select
+													value={editingDraft!.gsm}
+													onValueChange={(v) => updateEditingDraft('gsm', v)}
+												>
+													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
+														<SelectItem value="80">80</SelectItem>
+														<SelectItem value="100">100</SelectItem>
+														<SelectItem value="120">120</SelectItem>
+														<SelectItem value="150">150</SelectItem>
+														<SelectItem value="200">200</SelectItem>
+													</SelectContent>
+												</Select>
+											) : (
+												line.gsm
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.reelPerPack.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													step="0.01"
+													value={editingDraft!.reelPerPack}
+													onChange={(e) =>
+														updateEditingDraft(
+															'reelPerPack',
+															Number.parseFloat(e.target.value) ||
+																0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.reelPerPack.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.weightSku.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													step="0.01"
+													value={editingDraft!.weightSku}
+													onChange={(e) =>
+														updateEditingDraft(
+															'weightSku',
+															Number.parseFloat(e.target.value) ||
+																0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.weightSku.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.sku}
+											{editingRowIndex === idx ? (
+												<Input
+													value={editingDraft!.sku}
+													onChange={(e) =>
+														updateEditingDraft('sku', e.target.value)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.sku
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.rate.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													step="0.01"
+													value={editingDraft!.rate}
+													onChange={(e) =>
+														updateEditingDraft(
+															'rate',
+															Number.parseFloat(e.target.value) ||
+																0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.rate.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{amountFor(line).toFixed(2)}
+											{editingRowIndex === idx && editingDraft
+												? amountFor(editingDraft).toFixed(2)
+												: amountFor(line).toFixed(2)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.overhead.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													value={editingDraft!.overhead}
+													onChange={(e) =>
+														updateEditingDraft(
+															'overhead',
+															Number(e.target.value) || 0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.overhead.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{line.adjustment.toFixed(2)}
+											{editingRowIndex === idx ? (
+												<Input
+													type="number"
+													value={editingDraft!.adjustment}
+													onChange={(e) =>
+														updateEditingDraft(
+															'adjustment',
+															Number(e.target.value) || 0
+														)
+													}
+													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
+												/>
+											) : (
+												line.adjustment.toFixed(2)
+											)}
 										</TableCell>
 										<TableCell>
-											<div className="flex space-x-2">
-												<Button
-													size="sm"
-													variant="ghost"
-													onClick={() =>
-														openEdit(idx)
-													}
-													className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/20"
-												>
-													<Edit className="h-4 w-4" />
-												</Button>
-												<Button
-													size="sm"
-													variant="ghost"
-													onClick={() =>
-														removeLine(idx)
-													}
-													className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
-											</div>
+											{editingRowIndex === idx ? (
+												<div className="flex space-x-2">
+													<Button
+														size="sm"
+														variant="ghost"
+														onClick={saveEdit}
+														className="text-green-400 hover:text-green-300 hover:bg-green-600/20"
+													>
+														Save
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														onClick={cancelEdit}
+														className="text-gray-400 hover:text-gray-300 hover:bg-gray-600/20"
+													>
+														Cancel
+													</Button>
+												</div>
+											) : (
+												<div className="flex space-x-2">
+													<Button
+														size="sm"
+														variant="ghost"
+														onClick={() =>
+															openEdit(idx)
+														}
+														className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/20"
+													>
+														<Edit className="h-4 w-4" />
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														onClick={() =>
+															removeLine(idx)
+														}
+														className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
+													>
+														<Trash2 className="h-4 w-4" />
+													</Button>
+												</div>
+											)}
 										</TableCell>
 									</TableRow>
 								))}
@@ -315,12 +553,12 @@ export default function SalesOrderDetails() {
 				</CardContent>
 			</Card>
 
-			{/* Add/Edit Modal */}
-			<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+			{/* Add Modal */}
+			<Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
 				<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-3xl backdrop-blur-sm">
 					<DialogHeader>
 						<DialogTitle className="text-white">
-							{editingIndex === null ? 'Add Line' : 'Edit Line'}
+							Add Line
 						</DialogTitle>
 					</DialogHeader>
 					<div className="space-y-4">
@@ -331,9 +569,9 @@ export default function SalesOrderDetails() {
 									Item Name
 								</Label>
 								<Select
-									value={draft.itemName}
+									value={addDraft.itemName}
 									onValueChange={(v) =>
-										updateDraft('itemName', v)
+										updateAddDraft('itemName', v)
 									}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
@@ -358,8 +596,8 @@ export default function SalesOrderDetails() {
 							<div className="space-y-2">
 								<Label className="text-gray-300">BF</Label>
 								<Select
-									value={draft.bf}
-									onValueChange={(v) => updateDraft('bf', v)}
+									value={addDraft.bf}
+									onValueChange={(v) => updateAddDraft('bf', v)}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
 										<SelectValue placeholder="Select BF" />
@@ -376,8 +614,8 @@ export default function SalesOrderDetails() {
 							<div className="space-y-2">
 								<Label className="text-gray-300">GSM</Label>
 								<Select
-									value={draft.gsm}
-									onValueChange={(v) => updateDraft('gsm', v)}
+									value={addDraft.gsm}
+									onValueChange={(v) => updateAddDraft('gsm', v)}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
 										<SelectValue placeholder="Select GSM" />
@@ -400,9 +638,9 @@ export default function SalesOrderDetails() {
 								<Input
 									type="number"
 									step="0.01"
-									value={draft.width.toFixed(2)}
+									value={addDraft.width.toFixed(2)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'width',
 											Number.parseFloat(e.target.value) ||
 												0
@@ -416,9 +654,9 @@ export default function SalesOrderDetails() {
 								<Input
 									type="number"
 									step="0.01"
-									value={draft.length.toFixed(2)}
+									value={addDraft.length.toFixed(2)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'length',
 											Number.parseFloat(e.target.value) ||
 												0
@@ -430,9 +668,9 @@ export default function SalesOrderDetails() {
 							<div className="space-y-2">
 								<Label className="text-gray-300">Unit</Label>
 								<Select
-									value={draft.unit}
+									value={addDraft.unit}
 									onValueChange={(v) =>
-										updateDraft('unit', v)
+										updateAddDraft('unit', v)
 									}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
@@ -452,9 +690,9 @@ export default function SalesOrderDetails() {
 							<div className="space-y-2">
 								<Label className="text-gray-300">Grain</Label>
 								<Select
-									value={draft.grain}
+									value={addDraft.grain}
 									onValueChange={(v) =>
-										updateDraft('grain', v)
+										updateAddDraft('grain', v)
 									}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
@@ -480,9 +718,9 @@ export default function SalesOrderDetails() {
 								<Input
 									type="number"
 									step="0.01"
-									value={draft.reelPerPack.toFixed(2)}
+									value={addDraft.reelPerPack.toFixed(2)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'reelPerPack',
 											Number.parseFloat(e.target.value) ||
 												0
@@ -498,9 +736,9 @@ export default function SalesOrderDetails() {
 								<Input
 									type="number"
 									step="0.01"
-									value={draft.weightSku.toFixed(2)}
+									value={addDraft.weightSku.toFixed(2)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'weightSku',
 											Number.parseFloat(e.target.value) ||
 												0
@@ -518,9 +756,9 @@ export default function SalesOrderDetails() {
 								<Input
 									type="number"
 									step="0.01"
-									value={draft.rate.toFixed(2)}
+									value={addDraft.rate.toFixed(2)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'rate',
 											Number.parseFloat(e.target.value) ||
 												0
@@ -533,9 +771,9 @@ export default function SalesOrderDetails() {
 								<Label className="text-gray-300">OH</Label>
 								<Input
 									type="number"
-									value={String(draft.overhead)}
+									value={String(addDraft.overhead)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'overhead',
 											Number(e.target.value) || 0
 										)
@@ -547,9 +785,9 @@ export default function SalesOrderDetails() {
 								<Label className="text-gray-300">Adj</Label>
 								<Input
 									type="number"
-									value={String(draft.adjustment)}
+									value={String(addDraft.adjustment)}
 									onChange={(e) =>
-										updateDraft(
+										updateAddDraft(
 											'adjustment',
 											Number(e.target.value) || 0
 										)
@@ -564,9 +802,9 @@ export default function SalesOrderDetails() {
 							<div className="space-y-2">
 								<Label className="text-gray-300">SKU</Label>
 								<Input
-									value={draft.sku}
+									value={addDraft.sku}
 									onChange={(e) =>
-										updateDraft('sku', e.target.value)
+										updateAddDraft('sku', e.target.value)
 									}
 									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
@@ -576,7 +814,7 @@ export default function SalesOrderDetails() {
 								<Input
 									type="number"
 									step="0.01"
-									value={amountFor(draft).toFixed(2)}
+									value={amountFor(addDraft).toFixed(2)}
 									readOnly
 									className="bg-purple-950/50 border-purple-700 text-white"
 								/>
@@ -589,13 +827,13 @@ export default function SalesOrderDetails() {
 						<div className="flex justify-end space-x-2 pt-2">
 							<Button
 								variant="outline"
-								onClick={() => setIsModalOpen(false)}
+								onClick={() => setIsAddModalOpen(false)}
 								className="border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400 bg-gray-800"
 							>
 								Cancel
 							</Button>
 							<Button
-								onClick={saveDraft}
+								onClick={saveAdd}
 								className="bg-purple-600 hover:bg-purple-700"
 							>
 								Save
