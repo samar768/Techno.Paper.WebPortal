@@ -253,7 +253,7 @@ function LookupCombobox({
 					variant="outline"
 					role="combobox"
 					aria-expanded={open}
-					className="w-[320px] justify-between"
+					className="w-full justify-between"
 					type="button"
 				>
 					{selected
@@ -399,7 +399,7 @@ export function LookupSelect({ lookupCode, value, onChange }: LookupSelectProps)
 
 	if (loading) {
 		return (
-			<Button variant="outline" disabled className="w-[320px] justify-between">
+			<Button variant="outline" disabled className="w-full justify-between">
 				Loading...
 				<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 			</Button>
@@ -408,7 +408,7 @@ export function LookupSelect({ lookupCode, value, onChange }: LookupSelectProps)
 
 	if (error) {
 		return (
-			<Button variant="outline" disabled className="w-[320px] justify-between">
+			<Button variant="outline" disabled className="w-full justify-between">
 				Error loading data
 				<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 			</Button>

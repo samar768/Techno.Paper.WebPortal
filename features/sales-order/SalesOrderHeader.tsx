@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { LookupSelect } from '@/components/ui/lookup-select';
+import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
 
 type YesNo = 'Y' | 'N';
 
@@ -68,12 +70,83 @@ const initialForm: SalesOrderHeaderForm = {
 
 export default function SalesOrderHeader() {
 	const [form, setForm] = useState<SalesOrderHeaderForm>(initialForm);
+	const [selectedVoucherType, setSelectedVoucherType] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedSaleVoucher, setSelectedSaleVoucher] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedParty, setSelectedParty] = useState<NormalizedLookup | null>(
+		null
+	);
+	const [selectedDeliveryTo, setSelectedDeliveryTo] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedConsignee, setSelectedConsignee] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedToPlace, setSelectedToPlace] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedOrderType, setSelectedOrderType] =
+		useState<NormalizedLookup | null>(null);
 
 	const handleChange = useCallback(
 		(field: keyof SalesOrderHeaderForm, value: string | boolean) => {
 			setForm((prev) => ({ ...prev, [field]: value }));
 		},
 		[]
+	);
+
+	const handleVoucherTypeChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedVoucherType(item);
+			handleChange('voucherType', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleSaleVoucherChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedSaleVoucher(item);
+			handleChange('saleVType', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handlePartyChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedParty(item);
+			handleChange('party', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleDeliveryToChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedDeliveryTo(item);
+			handleChange('deliveryTo', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleConsigneeChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedConsignee(item);
+			handleChange('consignee', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleToPlaceChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedToPlace(item);
+			handleChange('toPlace', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleOrderTypeChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedOrderType(item);
+			handleChange('orderType', item?.Code ?? '');
+		},
+		[handleChange]
 	);
 
 	const requiredErrors = useMemo(() => {
@@ -137,24 +210,11 @@ export default function SalesOrderHeader() {
 								<Label className="text-gray-300">
 									Type <span className="text-red-400">*</span>
 								</Label>
-								<Select
-									value={form.voucherType}
-									onValueChange={(v) =>
-										handleChange('voucherType', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select type" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="SOGST">
-											SOGST - Sale Order Against GST
-										</SelectItem>
-										<SelectItem value="SOGST-RET">
-											SOGST-RET - Sale Order Return
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_FHP_TYPE"
+									value={selectedVoucherType}
+									onChange={handleVoucherTypeChange}
+								/>
 							</div>
 
 							{/* Order No */}
@@ -196,24 +256,11 @@ export default function SalesOrderHeader() {
 									Sale Voucher{' '}
 									<span className="text-red-400">*</span>
 								</Label>
-								<Select
-									value={form.saleVType}
-									onValueChange={(v) =>
-										handleChange('saleVType', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select sale voucher" />
-									</SelectTrigger>
-									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="HO10279">
-											HO10279 - 3K PACK PRO
-										</SelectItem>
-										<SelectItem value="HO28341">
-											HO28341 - Paper Co.
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_FHP_Sale_VType"
+									value={selectedSaleVoucher}
+									onChange={handleSaleVoucherChange}
+								/>
 							</div>
 
 							{/* Party Order */}
@@ -296,24 +343,11 @@ export default function SalesOrderHeader() {
 								<Label className="text-gray-300">
 									Party Name
 								</Label>
-								<Select
-									value={form.party}
-									onValueChange={(v) =>
-										handleChange('party', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select party" />
-									</SelectTrigger>
-									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="HO10279">
-											HO10279 - 3K PACK PRO
-										</SelectItem>
-										<SelectItem value="HO28341">
-											HO28341 - Paper Co.
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_CUSTOMER"
+									value={selectedParty}
+									onChange={handlePartyChange}
+								/>
 							</div>
 
 							{/* Distributor */}
@@ -339,24 +373,11 @@ export default function SalesOrderHeader() {
 								<Label className="text-gray-300">
 									Delivery To
 								</Label>
-								<Select
-									value={form.deliveryTo}
-									onValueChange={(v) =>
-										handleChange('deliveryTo', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select delivery location" />
-									</SelectTrigger>
-									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="main">
-											Main Warehouse
-										</SelectItem>
-										<SelectItem value="branch-a">
-											Branch A
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_FHP_City"
+									value={selectedDeliveryTo}
+									onChange={handleDeliveryToChange}
+								/>
 							</div>
 
 							{/* Delivery Date */}
@@ -384,24 +405,11 @@ export default function SalesOrderHeader() {
 									Consignee{' '}
 									<span className="text-red-400">*</span>
 								</Label>
-								<Select
-									value={form.consignee}
-									onValueChange={(v) =>
-										handleChange('consignee', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select consignee" />
-									</SelectTrigger>
-									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="HO10279">
-											HO10279 - 3K PACK PRO
-										</SelectItem>
-										<SelectItem value="HO28341">
-											HO28341 - Paper Co.
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_CUSTOMER"
+									value={selectedConsignee}
+									onChange={handleConsigneeChange}
+								/>
 							</div>
 
 							{/* To Place */}
@@ -409,24 +417,11 @@ export default function SalesOrderHeader() {
 								<Label className="text-gray-300">
 									To Place
 								</Label>
-								<Select
-									value={form.toPlace}
-									onValueChange={(v) =>
-										handleChange('toPlace', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select place" />
-									</SelectTrigger>
-									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="factory">
-											Factory
-										</SelectItem>
-										<SelectItem value="warehouse">
-											Warehouse
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_FHP_City"
+									value={selectedToPlace}
+									onChange={handleToPlaceChange}
+								/>
 							</div>
 						</div>
 
@@ -438,24 +433,11 @@ export default function SalesOrderHeader() {
 									Order Type{' '}
 									<span className="text-red-400">*</span>
 								</Label>
-								<Select
-									value={form.orderType}
-									onValueChange={(v) =>
-										handleChange('orderType', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select order type" />
-									</SelectTrigger>
-									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="sheet">
-											S - Sheet
-										</SelectItem>
-										<SelectItem value="roll">
-											R - Roll
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<LookupSelect
+									lookupCode="SORD_FHP_OrderType"
+									value={selectedOrderType}
+									onChange={handleOrderTypeChange}
+								/>
 							</div>
 
 							{/* Remark */}

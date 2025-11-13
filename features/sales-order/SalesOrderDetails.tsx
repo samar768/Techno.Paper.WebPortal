@@ -27,16 +27,19 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import { LookupSelect } from '@/components/ui/lookup-select';
+import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
 
 type YesNo = 'Y' | 'N';
 
 type SalesOrderLine = {
+	itemCode: string;
 	itemName: string;
 	description: string;
 	bf: string; // Burst Factor (dropdown)
 	width: number; // cm
 	length: number; // cm
-	unit: 'CM' | 'IN' | 'MM';
+	unit: string;
 	grain: string; // dropdown
 	gsm: string; // dropdown
 	reelPerPack: number; // Quantity
@@ -51,6 +54,7 @@ type SalesOrderLine = {
 };
 
 const defaultLine: SalesOrderLine = {
+	itemCode: '',
 	itemName: 'Kraft Paper',
 	description: '',
 	bf: '14',
@@ -88,6 +92,30 @@ export default function SalesOrderDetails() {
 
 	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
 	const [editingDraft, setEditingDraft] = useState<SalesOrderLine | null>(null);
+	const [addSelectedItem, setAddSelectedItem] = useState<NormalizedLookup | null>(
+		null
+	);
+	const [editingSelectedItem, setEditingSelectedItem] =
+		useState<NormalizedLookup | null>(null);
+	const [addSelectedBf, setAddSelectedBf] = useState<NormalizedLookup | null>(
+		null
+	);
+	const [editingSelectedBf, setEditingSelectedBf] =
+		useState<NormalizedLookup | null>(null);
+	const [addSelectedUnit, setAddSelectedUnit] = useState<NormalizedLookup | null>(
+		null
+	);
+	const [editingSelectedUnit, setEditingSelectedUnit] =
+		useState<NormalizedLookup | null>(null);
+	const [addSelectedGrain, setAddSelectedGrain] =
+		useState<NormalizedLookup | null>(null);
+	const [editingSelectedGrain, setEditingSelectedGrain] =
+		useState<NormalizedLookup | null>(null);
+	const [addSelectedGsm, setAddSelectedGsm] = useState<NormalizedLookup | null>(
+		null
+	);
+	const [editingSelectedGsm, setEditingSelectedGsm] =
+		useState<NormalizedLookup | null>(null);
 
 	const totals = useMemo(() => {
 		const totalQuantity = lines.reduce(
@@ -109,13 +137,69 @@ export default function SalesOrderDetails() {
 
 	const openAdd = useCallback(() => {
 		setAddDraft({ ...defaultLine });
+		setAddSelectedItem(null);
+		setAddSelectedBf(null);
+		setAddSelectedUnit(null);
+		setAddSelectedGrain(null);
+		setAddSelectedGsm(null);
 		setIsAddModalOpen(true);
 	}, []);
 
 	const openEdit = useCallback(
 		(idx: number) => {
+			const line = lines[idx];
 			setEditingRowIndex(idx);
-			setEditingDraft({ ...lines[idx] });
+			setEditingDraft({ ...line });
+			setEditingSelectedItem(
+				line
+					? {
+							Code: line.itemCode || line.itemName,
+							Description: line.itemName,
+							ColumnHeaders: [],
+							Additional: [],
+					  }
+					: null
+			);
+			setEditingSelectedBf(
+				line
+					? {
+							Code: line.bf,
+							Description: line.bf,
+							ColumnHeaders: [],
+							Additional: [],
+					  }
+					: null
+			);
+			setEditingSelectedUnit(
+				line
+					? {
+							Code: line.unit,
+							Description: line.unit,
+							ColumnHeaders: [],
+							Additional: [],
+					  }
+					: null
+			);
+			setEditingSelectedGrain(
+				line
+					? {
+							Code: line.grain,
+							Description: line.grain,
+							ColumnHeaders: [],
+							Additional: [],
+					  }
+					: null
+			);
+			setEditingSelectedGsm(
+				line
+					? {
+							Code: line.gsm,
+							Description: line.gsm,
+							ColumnHeaders: [],
+							Additional: [],
+					  }
+					: null
+			);
 		},
 		[lines]
 	);
@@ -136,6 +220,11 @@ export default function SalesOrderDetails() {
 		setLines((prev) => [...prev, newLine]);
 		setIsAddModalOpen(false);
 		setAddDraft({ ...defaultLine });
+		setAddSelectedItem(null);
+		setAddSelectedBf(null);
+		setAddSelectedUnit(null);
+		setAddSelectedGrain(null);
+		setAddSelectedGsm(null);
 	}, [addDraft]);
 
 	const saveEdit = useCallback(() => {
@@ -146,16 +235,145 @@ export default function SalesOrderDetails() {
 		}
 		setEditingRowIndex(null);
 		setEditingDraft(null);
+		setEditingSelectedItem(null);
+		setEditingSelectedBf(null);
+		setEditingSelectedUnit(null);
+		setEditingSelectedGrain(null);
+		setEditingSelectedGsm(null);
 	}, [editingRowIndex, editingDraft]);
 
 	const cancelEdit = useCallback(() => {
 		setEditingRowIndex(null);
 		setEditingDraft(null);
+		setEditingSelectedItem(null);
+		setEditingSelectedBf(null);
+		setEditingSelectedUnit(null);
+		setEditingSelectedGrain(null);
+		setEditingSelectedGsm(null);
 	}, []);
 
 	const updateEditingDraft = useCallback(
 		(field: keyof SalesOrderLine, value: string | number) => {
-			setEditingDraft((prev) => prev ? { ...prev, [field]: value as never } : null);
+			setEditingDraft((prev) =>
+				prev ? { ...prev, [field]: value as never } : null
+			);
+		},
+		[]
+	);
+
+	const handleAddItemChange = useCallback((item: NormalizedLookup | null) => {
+		setAddSelectedItem(item);
+		setAddDraft((prev) => ({
+			...prev,
+			itemCode: item?.Code ?? '',
+			itemName: item?.Description ?? '',
+		}));
+	}, []);
+
+	const handleEditingItemChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setEditingSelectedItem(item);
+			setEditingDraft((prev) =>
+				prev
+					? {
+							...prev,
+							itemCode: item?.Code ?? '',
+							itemName: item?.Description ?? '',
+					  }
+					: prev
+			);
+		},
+		[]
+	);
+
+	const handleAddBfChange = useCallback((bf: NormalizedLookup | null) => {
+		setAddSelectedBf(bf);
+		setAddDraft((prev) => ({
+			...prev,
+			bf: bf?.Code ?? '',
+		}));
+	}, []);
+
+	const handleEditingBfChange = useCallback(
+		(bf: NormalizedLookup | null) => {
+			setEditingSelectedBf(bf);
+			setEditingDraft((prev) =>
+				prev
+					? {
+							...prev,
+							bf: bf?.Code ?? '',
+					  }
+					: prev
+			);
+		},
+		[]
+	);
+
+	const handleAddUnitChange = useCallback((unit: NormalizedLookup | null) => {
+		setAddSelectedUnit(unit);
+		setAddDraft((prev) => ({
+			...prev,
+			unit: unit?.Code ?? '',
+		}));
+	}, []);
+
+	const handleEditingUnitChange = useCallback(
+		(unit: NormalizedLookup | null) => {
+			setEditingSelectedUnit(unit);
+			setEditingDraft((prev) =>
+				prev
+					? {
+							...prev,
+							unit: unit?.Code ?? '',
+					  }
+					: prev
+			);
+		},
+		[]
+	);
+
+	const handleAddGrainChange = useCallback((grain: NormalizedLookup | null) => {
+		setAddSelectedGrain(grain);
+		setAddDraft((prev) => ({
+			...prev,
+			grain: grain?.Code ?? '',
+		}));
+	}, []);
+
+	const handleEditingGrainChange = useCallback(
+		(grain: NormalizedLookup | null) => {
+			setEditingSelectedGrain(grain);
+			setEditingDraft((prev) =>
+				prev
+					? {
+							...prev,
+							grain: grain?.Code ?? '',
+					  }
+					: prev
+			);
+		},
+		[]
+	);
+
+	const handleAddGsmChange = useCallback((gsm: NormalizedLookup | null) => {
+		setAddSelectedGsm(gsm);
+		setAddDraft((prev) => ({
+			...prev,
+			gsm: gsm?.Code ?? '',
+		}));
+	}, []);
+
+	const handleEditingGsmChange = useCallback(
+		(gsm: NormalizedLookup | null) => {
+			setEditingSelectedGsm(gsm);
+			setEditingDraft((prev) =>
+				prev
+					? {
+							...prev,
+							gsm: gsm?.Code ?? '',
+					  }
+					: prev
+			);
 		},
 		[]
 	);
@@ -200,6 +418,9 @@ export default function SalesOrderDetails() {
 										Unit
 									</TableHead>
 									<TableHead className="text-gray-300">
+										Grain
+									</TableHead>
+									<TableHead className="text-gray-300">
 										GSM
 									</TableHead>
 									<TableHead className="text-gray-300">
@@ -239,51 +460,26 @@ export default function SalesOrderDetails() {
 										</TableCell>
 										<TableCell className="text-gray-200">
 											{editingRowIndex === idx ? (
-												<Select
-													value={editingDraft!.itemName}
-													onValueChange={(v) =>
-														updateEditingDraft('itemName', v)
-													}
-												>
-													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-200 focus:ring-0 focus:ring-offset-0 p-0">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-														<SelectItem value="Kraft Paper">
-															Kraft Paper
-														</SelectItem>
-														<SelectItem value="Newsprint">
-															Newsprint
-														</SelectItem>
-														<SelectItem value="Coated Paper">
-															Coated Paper
-														</SelectItem>
-														<SelectItem value="Cardboard">
-															Cardboard
-														</SelectItem>
-													</SelectContent>
-												</Select>
+												<div className="max-w-xs">
+													<LookupSelect
+														lookupCode="SORD_FHPGD_Item"
+														value={editingSelectedItem}
+														onChange={handleEditingItemChange}
+													/>
+												</div>
 											) : (
 												line.itemName
 											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
 											{editingRowIndex === idx ? (
-												<Select
-													value={editingDraft!.bf}
-													onValueChange={(v) => updateEditingDraft('bf', v)}
-												>
-													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-														<SelectItem value="14">14</SelectItem>
-														<SelectItem value="16">16</SelectItem>
-														<SelectItem value="18">18</SelectItem>
-														<SelectItem value="20">20</SelectItem>
-														<SelectItem value="22">22</SelectItem>
-													</SelectContent>
-												</Select>
+												<div className="max-w-xs">
+													<LookupSelect
+														lookupCode="SORD_FHPGD_BF"
+														value={editingSelectedBf}
+														onChange={handleEditingBfChange}
+													/>
+												</div>
 											) : (
 												line.bf
 											)}
@@ -328,42 +524,39 @@ export default function SalesOrderDetails() {
 										</TableCell>
 										<TableCell className="text-gray-300">
 											{editingRowIndex === idx ? (
-												<Select
-													value={editingDraft!.unit}
-													onValueChange={(v) =>
-														updateEditingDraft('unit', v)
-													}
-												>
-													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-														<SelectItem value="CM">CM</SelectItem>
-														<SelectItem value="IN">IN</SelectItem>
-														<SelectItem value="MM">MM</SelectItem>
-													</SelectContent>
-												</Select>
+												<div className="max-w-xs">
+													<LookupSelect
+														lookupCode="SORD_FHPGD_SizeUnit"
+														value={editingSelectedUnit}
+														onChange={handleEditingUnitChange}
+													/>
+												</div>
 											) : (
 												line.unit
 											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
 											{editingRowIndex === idx ? (
-												<Select
-													value={editingDraft!.gsm}
-													onValueChange={(v) => updateEditingDraft('gsm', v)}
-												>
-													<SelectTrigger className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-														<SelectItem value="80">80</SelectItem>
-														<SelectItem value="100">100</SelectItem>
-														<SelectItem value="120">120</SelectItem>
-														<SelectItem value="150">150</SelectItem>
-														<SelectItem value="200">200</SelectItem>
-													</SelectContent>
-												</Select>
+												<div className="max-w-xs">
+													<LookupSelect
+														lookupCode="SORD_FHPGD_Grain"
+														value={editingSelectedGrain}
+														onChange={handleEditingGrainChange}
+													/>
+												</div>
+											) : (
+												line.grain
+											)}
+										</TableCell>
+										<TableCell className="text-gray-300">
+											{editingRowIndex === idx ? (
+												<div className="max-w-xs">
+													<LookupSelect
+														lookupCode="SORD_FHPGD_GSM"
+														value={editingSelectedGsm}
+														onChange={handleEditingGsmChange}
+													/>
+												</div>
 											) : (
 												line.gsm
 											)}
@@ -568,66 +761,33 @@ export default function SalesOrderDetails() {
 								<Label className="text-gray-300">
 									Item Name
 								</Label>
-								<Select
-									value={addDraft.itemName}
-									onValueChange={(v) =>
-										updateAddDraft('itemName', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select item name" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="Kraft Paper">
-											Kraft Paper
-										</SelectItem>
-										<SelectItem value="Newsprint">
-											Newsprint
-										</SelectItem>
-										<SelectItem value="Coated Paper">
-											Coated Paper
-										</SelectItem>
-										<SelectItem value="Cardboard">
-											Cardboard
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<div className="max-w-xs">
+									<LookupSelect
+										lookupCode="SORD_FHPGD_Item"
+										value={addSelectedItem}
+										onChange={handleAddItemChange}
+									/>
+								</div>
 							</div>
 							<div className="space-y-2">
 								<Label className="text-gray-300">BF</Label>
-								<Select
-									value={addDraft.bf}
-									onValueChange={(v) => updateAddDraft('bf', v)}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select BF" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="14">14</SelectItem>
-										<SelectItem value="16">16</SelectItem>
-										<SelectItem value="18">18</SelectItem>
-										<SelectItem value="20">20</SelectItem>
-										<SelectItem value="22">22</SelectItem>
-									</SelectContent>
-								</Select>
+								<div className="max-w-xs">
+									<LookupSelect
+										lookupCode="SORD_FHPGD_BF"
+										value={addSelectedBf}
+										onChange={handleAddBfChange}
+									/>
+								</div>
 							</div>
 							<div className="space-y-2">
 								<Label className="text-gray-300">GSM</Label>
-								<Select
-									value={addDraft.gsm}
-									onValueChange={(v) => updateAddDraft('gsm', v)}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select GSM" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="80">80</SelectItem>
-										<SelectItem value="100">100</SelectItem>
-										<SelectItem value="120">120</SelectItem>
-										<SelectItem value="150">150</SelectItem>
-										<SelectItem value="200">200</SelectItem>
-									</SelectContent>
-								</Select>
+								<div className="max-w-xs">
+									<LookupSelect
+										lookupCode="SORD_FHPGD_GSM"
+										value={addSelectedGsm}
+										onChange={handleAddGsmChange}
+									/>
+								</div>
 							</div>
 						</div>
 
@@ -667,21 +827,13 @@ export default function SalesOrderDetails() {
 							</div>
 							<div className="space-y-2">
 								<Label className="text-gray-300">Unit</Label>
-								<Select
-									value={addDraft.unit}
-									onValueChange={(v) =>
-										updateAddDraft('unit', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="CM">CM</SelectItem>
-										<SelectItem value="IN">IN</SelectItem>
-										<SelectItem value="MM">MM</SelectItem>
-									</SelectContent>
-								</Select>
+								<div className="max-w-xs">
+									<LookupSelect
+										lookupCode="SORD_FHPGD_SizeUnit"
+										value={addSelectedUnit}
+										onChange={handleAddUnitChange}
+									/>
+								</div>
 							</div>
 						</div>
 
@@ -689,27 +841,13 @@ export default function SalesOrderDetails() {
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div className="space-y-2">
 								<Label className="text-gray-300">Grain</Label>
-								<Select
-									value={addDraft.grain}
-									onValueChange={(v) =>
-										updateAddDraft('grain', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select grain" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="Long">
-											Long
-										</SelectItem>
-										<SelectItem value="Short">
-											Short
-										</SelectItem>
-										<SelectItem value="Cross">
-											Cross
-										</SelectItem>
-									</SelectContent>
-								</Select>
+								<div className="max-w-xs">
+									<LookupSelect
+										lookupCode="SORD_FHPGD_Grain"
+										value={addSelectedGrain}
+										onChange={handleAddGrainChange}
+									/>
+								</div>
 							</div>
 							<div className="space-y-2">
 								<Label className="text-gray-300">

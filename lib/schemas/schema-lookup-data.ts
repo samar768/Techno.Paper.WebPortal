@@ -10,7 +10,7 @@ export const VoucherTypeSchema = z.array(
 
 export const CustomerSchema = z.array(
 	z.object({
-		SubCode: z.string(),
+		Code: z.string(),
 		Description: z.string(),
 		ManualCode: z.string(),
 		Address: z.string(),
@@ -126,13 +126,27 @@ export const schemaTransformers: {
 		// CustomerSchema: SubCode, Description, ManualCode, Address, CityName, etc.
 		schema: CustomerSchema.element,
 		transform: (parsed) => ({
-			Code: parsed.SubCode,
+			Code: parsed.Code,
 			Description: parsed.Description,
-			ColumnHeaders: ['Manual Code', 'Address', 'City'],
+			ColumnHeaders: [
+				'Manual Code',
+				'Address',
+				'City Name',
+				'DName',
+				'DIS City',
+				'Zone',
+				'DZone',
+				'City Code',
+			],
 			Additional: [
 				parsed.ManualCode ?? '',
 				parsed.Address ?? '',
 				parsed.CityName ?? '',
+				parsed.DName ?? '',
+				parsed.DISCity ?? '',
+				parsed.Zone ?? '',
+				parsed.DZone ?? '',
+				parsed.CityCode ?? '',
 			],
 		}),
 	},
