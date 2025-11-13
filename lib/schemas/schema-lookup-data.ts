@@ -103,7 +103,8 @@ export const SiteSchema = z.array(
 export type NormalizedLookup = {
 	Code: string;
 	Description: string;
-	Additional?: string;
+	ColumnHeaders?: string[];
+	Additional?: string[];
 };
 
 // Config array: pairs each schema with a transform function
@@ -117,6 +118,8 @@ export const schemaTransformers: {
 		transform: (parsed) => ({
 			Code: parsed.V_Type,
 			Description: parsed.Description,
+			ColumnHeaders: [],
+			Additional: [],
 		}),
 	},
 	{
@@ -125,18 +128,12 @@ export const schemaTransformers: {
 		transform: (parsed) => ({
 			Code: parsed.SubCode,
 			Description: parsed.Description,
-			Additional:
-				[parsed.ManualCode, parsed.Address, parsed.CityName]
-					.filter(Boolean)
-					.join(', ') || undefined,
-		}),
-	},
-	{
-		// GenericLookupSchema: Code, Description
-		schema: GenericLookupSchema,
-		transform: (parsed) => ({
-			Code: parsed.Code,
-			Description: parsed.Description,
+			ColumnHeaders: ['Manual Code', 'Address', 'City'],
+			Additional: [
+				parsed.ManualCode ?? '',
+				parsed.Address ?? '',
+				parsed.CityName ?? '',
+			],
 		}),
 	},
 	{
@@ -145,7 +142,8 @@ export const schemaTransformers: {
 		transform: (parsed) => ({
 			Code: parsed.Code,
 			Description: parsed.Description,
-			Additional: parsed.State || undefined,
+			ColumnHeaders: ['State'],
+			Additional: [parsed.State ?? ''],
 		}),
 	},
 	{
@@ -154,17 +152,22 @@ export const schemaTransformers: {
 		transform: (parsed) => ({
 			Code: parsed.Code,
 			Description: parsed.Description,
-			Additional:
-				[
-					parsed.ManualCode,
-					parsed.SKU,
-					parsed.Varity,
-					parsed.GSM,
-					parsed.SizeLength,
-					parsed.SizeWidth,
-				]
-					.filter(Boolean)
-					.join(', ') || undefined,
+			ColumnHeaders: [
+				'Manual Code',
+				'SKU',
+				'Varity',
+				'GSM',
+				'Length',
+				'Width',
+			],
+			Additional: [
+				parsed.ManualCode ?? '',
+				parsed.SKU ?? '',
+				parsed.Varity ?? '',
+				parsed.GSM ?? '',
+				parsed.SizeLength ?? '',
+				parsed.SizeWidth ?? '',
+			],
 		}),
 	},
 	{
@@ -173,15 +176,21 @@ export const schemaTransformers: {
 		transform: (parsed) => ({
 			Code: parsed.Code,
 			Description: parsed.Description,
-			Additional:
-				[
-					parsed.Address1,
-					parsed.Address2,
-					parsed.City,
-					parsed.State_Name,
-				]
-					.filter(Boolean)
-					.join(', ') || undefined,
+			ColumnHeaders: ['Address 1', 'Address 2', 'City', 'State'],
+			Additional: [
+				parsed.Address1 ?? '',
+				parsed.Address2 ?? '',
+				parsed.City ?? '',
+				parsed.State_Name ?? '',
+			],
+		}),
+	},
+	{
+		// GenericLookupSchema: Code, Description
+		schema: GenericLookupSchema,
+		transform: (parsed) => ({
+			Code: parsed.Code,
+			Description: parsed.Description,
 		}),
 	},
 ];
