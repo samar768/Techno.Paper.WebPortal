@@ -10,7 +10,10 @@ import SalesOrderHeader from '@/features/sales-order/SalesOrderHeader';
 import SalesOrderDetails from '@/features/sales-order/SalesOrderDetails';
 import SalesOrderTermsConditions from '@/features/sales-order/SalesOrderTermsConditions';
 import SalesOrderExpenses from '@/features/sales-order/SalesOrderExpenses';
-import SalesOrderFooter from '@/features/sales-order/SalesOrderFooter';
+import SalesOrderFooterOption1, {
+	SalesOrderFooterOption2,
+} from '@/features/sales-order/SalesOrderFooter';
+import { SalesOrderFooter2 } from '@/features/sales-order/SalesOrderFooter2';
 
 export default function SaleOrderDetailPage() {
 	const params = useParams();
@@ -48,7 +51,7 @@ export default function SaleOrderDetailPage() {
 
 	return (
 		<>
-			<div className="pb-24">
+			<div className="pb-16">
 				<SalesOrderHeader />
 				<br />
 				<SalesOrderDetails />
@@ -57,9 +60,24 @@ export default function SaleOrderDetailPage() {
 					<SalesOrderTermsConditions />
 					<SalesOrderExpenses />
 				</div>
+				<SalesOrderFooterOption1 />
 			</div>
 
-			<SalesOrderFooter />
+			{/*<SalesOrderFooterOption2 />*/}
+
+			{/*<main className="flex min-h-screen flex-col items-center justify-center p-4">
+				<div className="text-center space-y-4 max-w-2xl">
+					<h1 className="text-4xl font-bold tracking-tight">
+						Floating Dock Menu
+					</h1>
+					<p className="text-lg text-muted-foreground">
+						Check out the dock menu fixed at the bottom of your
+						screen. It features responsive design and smooth
+						interactions.
+					</p>
+				</div>
+				<SalesOrderFooter2 />
+			</main>*/}
 		</>
 	);
 }
