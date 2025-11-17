@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { LookupSelect } from '@/components/ui/lookup-select';
 import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
+import type { SaleOrderLookups } from '@/lib/lookup-types';
 
 type YesNo = 'Y' | 'N';
 
@@ -68,7 +69,11 @@ const initialForm: SalesOrderHeaderForm = {
 	closed: false,
 };
 
-export default function SalesOrderHeader() {
+export default function SalesOrderHeader({
+	lookups,
+}: {
+	lookups?: SaleOrderLookups;
+}) {
 	const [form, setForm] = useState<SalesOrderHeaderForm>(initialForm);
 	const [selectedVoucherType, setSelectedVoucherType] =
 		useState<NormalizedLookup | null>(null);
@@ -214,6 +219,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_FHP_TYPE"
 									value={selectedVoucherType}
 									onChange={handleVoucherTypeChange}
+									items={lookups?.voucherTypes}
 								/>
 							</div>
 
@@ -260,6 +266,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_FHP_Sale_VType"
 									value={selectedSaleVoucher}
 									onChange={handleSaleVoucherChange}
+									items={lookups?.saleVTypes}
 								/>
 							</div>
 
@@ -347,6 +354,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_CUSTOMER"
 									value={selectedParty}
 									onChange={handlePartyChange}
+									items={lookups?.customers}
 								/>
 							</div>
 
@@ -377,6 +385,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_FHP_City"
 									value={selectedDeliveryTo}
 									onChange={handleDeliveryToChange}
+									items={lookups?.cities}
 								/>
 							</div>
 
@@ -409,6 +418,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_CUSTOMER"
 									value={selectedConsignee}
 									onChange={handleConsigneeChange}
+									items={lookups?.customers}
 								/>
 							</div>
 
@@ -421,6 +431,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_FHP_City"
 									value={selectedToPlace}
 									onChange={handleToPlaceChange}
+									items={lookups?.cities}
 								/>
 							</div>
 						</div>
@@ -437,6 +448,7 @@ export default function SalesOrderHeader() {
 									lookupCode="SORD_FHP_OrderType"
 									value={selectedOrderType}
 									onChange={handleOrderTypeChange}
+									items={lookups?.orderTypes}
 								/>
 							</div>
 

@@ -29,6 +29,7 @@ import {
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { LookupSelect } from '@/components/ui/lookup-select';
 import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
+import type { SaleOrderLookups } from '@/lib/lookup-types';
 
 type YesNo = 'Y' | 'N';
 
@@ -74,7 +75,11 @@ const defaultLine: SalesOrderLine = {
 	adjustment: 0,
 };
 
-export default function SalesOrderDetails() {
+export default function SalesOrderDetails({
+	lookups,
+}: {
+	lookups?: SaleOrderLookups;
+}) {
 	const [lines, setLines] = useState<SalesOrderLine[]>([
 		{
 			...defaultLine,
@@ -91,10 +96,11 @@ export default function SalesOrderDetails() {
 	const [addDraft, setAddDraft] = useState<SalesOrderLine>(defaultLine);
 
 	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
-	const [editingDraft, setEditingDraft] = useState<SalesOrderLine | null>(null);
-	const [addSelectedItem, setAddSelectedItem] = useState<NormalizedLookup | null>(
+	const [editingDraft, setEditingDraft] = useState<SalesOrderLine | null>(
 		null
 	);
+	const [addSelectedItem, setAddSelectedItem] =
+		useState<NormalizedLookup | null>(null);
 	const [editingSelectedItem, setEditingSelectedItem] =
 		useState<NormalizedLookup | null>(null);
 	const [addSelectedBf, setAddSelectedBf] = useState<NormalizedLookup | null>(
@@ -102,18 +108,16 @@ export default function SalesOrderDetails() {
 	);
 	const [editingSelectedBf, setEditingSelectedBf] =
 		useState<NormalizedLookup | null>(null);
-	const [addSelectedUnit, setAddSelectedUnit] = useState<NormalizedLookup | null>(
-		null
-	);
+	const [addSelectedUnit, setAddSelectedUnit] =
+		useState<NormalizedLookup | null>(null);
 	const [editingSelectedUnit, setEditingSelectedUnit] =
 		useState<NormalizedLookup | null>(null);
 	const [addSelectedGrain, setAddSelectedGrain] =
 		useState<NormalizedLookup | null>(null);
 	const [editingSelectedGrain, setEditingSelectedGrain] =
 		useState<NormalizedLookup | null>(null);
-	const [addSelectedGsm, setAddSelectedGsm] = useState<NormalizedLookup | null>(
-		null
-	);
+	const [addSelectedGsm, setAddSelectedGsm] =
+		useState<NormalizedLookup | null>(null);
 	const [editingSelectedGsm, setEditingSelectedGsm] =
 		useState<NormalizedLookup | null>(null);
 
@@ -230,7 +234,9 @@ export default function SalesOrderDetails() {
 	const saveEdit = useCallback(() => {
 		if (editingRowIndex !== null && editingDraft) {
 			setLines((prev) =>
-				prev.map((l, i) => (i === editingRowIndex ? { ...editingDraft } : l))
+				prev.map((l, i) =>
+					i === editingRowIndex ? { ...editingDraft } : l
+				)
 			);
 		}
 		setEditingRowIndex(null);
@@ -294,20 +300,17 @@ export default function SalesOrderDetails() {
 		}));
 	}, []);
 
-	const handleEditingBfChange = useCallback(
-		(bf: NormalizedLookup | null) => {
-			setEditingSelectedBf(bf);
-			setEditingDraft((prev) =>
-				prev
-					? {
-							...prev,
-							bf: bf?.Code ?? '',
-					  }
-					: prev
-			);
-		},
-		[]
-	);
+	const handleEditingBfChange = useCallback((bf: NormalizedLookup | null) => {
+		setEditingSelectedBf(bf);
+		setEditingDraft((prev) =>
+			prev
+				? {
+						...prev,
+						bf: bf?.Code ?? '',
+				  }
+				: prev
+		);
+	}, []);
 
 	const handleAddUnitChange = useCallback((unit: NormalizedLookup | null) => {
 		setAddSelectedUnit(unit);
@@ -332,13 +335,16 @@ export default function SalesOrderDetails() {
 		[]
 	);
 
-	const handleAddGrainChange = useCallback((grain: NormalizedLookup | null) => {
-		setAddSelectedGrain(grain);
-		setAddDraft((prev) => ({
-			...prev,
-			grain: grain?.Code ?? '',
-		}));
-	}, []);
+	const handleAddGrainChange = useCallback(
+		(grain: NormalizedLookup | null) => {
+			setAddSelectedGrain(grain);
+			setAddDraft((prev) => ({
+				...prev,
+				grain: grain?.Code ?? '',
+			}));
+		},
+		[]
+	);
 
 	const handleEditingGrainChange = useCallback(
 		(grain: NormalizedLookup | null) => {
@@ -463,8 +469,13 @@ export default function SalesOrderDetails() {
 												<div className="max-w-xs">
 													<LookupSelect
 														lookupCode="SORD_FHPGD_Item"
-														value={editingSelectedItem}
-														onChange={handleEditingItemChange}
+														value={
+															editingSelectedItem
+														}
+														onChange={
+															handleEditingItemChange
+														}
+														items={lookups?.items}
 													/>
 												</div>
 											) : (
@@ -476,8 +487,13 @@ export default function SalesOrderDetails() {
 												<div className="max-w-xs">
 													<LookupSelect
 														lookupCode="SORD_FHPGD_BF"
-														value={editingSelectedBf}
-														onChange={handleEditingBfChange}
+														value={
+															editingSelectedBf
+														}
+														onChange={
+															handleEditingBfChange
+														}
+														items={lookups?.bfs}
 													/>
 												</div>
 											) : (
@@ -493,8 +509,9 @@ export default function SalesOrderDetails() {
 													onChange={(e) =>
 														updateEditingDraft(
 															'width',
-															Number.parseFloat(e.target.value) ||
-																0
+															Number.parseFloat(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -512,8 +529,9 @@ export default function SalesOrderDetails() {
 													onChange={(e) =>
 														updateEditingDraft(
 															'length',
-															Number.parseFloat(e.target.value) ||
-																0
+															Number.parseFloat(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -527,8 +545,15 @@ export default function SalesOrderDetails() {
 												<div className="max-w-xs">
 													<LookupSelect
 														lookupCode="SORD_FHPGD_SizeUnit"
-														value={editingSelectedUnit}
-														onChange={handleEditingUnitChange}
+														value={
+															editingSelectedUnit
+														}
+														onChange={
+															handleEditingUnitChange
+														}
+														items={
+															lookups?.sizeUnits
+														}
 													/>
 												</div>
 											) : (
@@ -540,8 +565,13 @@ export default function SalesOrderDetails() {
 												<div className="max-w-xs">
 													<LookupSelect
 														lookupCode="SORD_FHPGD_Grain"
-														value={editingSelectedGrain}
-														onChange={handleEditingGrainChange}
+														value={
+															editingSelectedGrain
+														}
+														onChange={
+															handleEditingGrainChange
+														}
+														items={lookups?.grains}
 													/>
 												</div>
 											) : (
@@ -553,8 +583,13 @@ export default function SalesOrderDetails() {
 												<div className="max-w-xs">
 													<LookupSelect
 														lookupCode="SORD_FHPGD_GSM"
-														value={editingSelectedGsm}
-														onChange={handleEditingGsmChange}
+														value={
+															editingSelectedGsm
+														}
+														onChange={
+															handleEditingGsmChange
+														}
+														items={lookups?.gsms}
 													/>
 												</div>
 											) : (
@@ -566,12 +601,16 @@ export default function SalesOrderDetails() {
 												<Input
 													type="number"
 													step="0.01"
-													value={editingDraft!.reelPerPack}
+													value={
+														editingDraft!
+															.reelPerPack
+													}
 													onChange={(e) =>
 														updateEditingDraft(
 															'reelPerPack',
-															Number.parseFloat(e.target.value) ||
-																0
+															Number.parseFloat(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -585,12 +624,15 @@ export default function SalesOrderDetails() {
 												<Input
 													type="number"
 													step="0.01"
-													value={editingDraft!.weightSku}
+													value={
+														editingDraft!.weightSku
+													}
 													onChange={(e) =>
 														updateEditingDraft(
 															'weightSku',
-															Number.parseFloat(e.target.value) ||
-																0
+															Number.parseFloat(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -604,7 +646,10 @@ export default function SalesOrderDetails() {
 												<Input
 													value={editingDraft!.sku}
 													onChange={(e) =>
-														updateEditingDraft('sku', e.target.value)
+														updateEditingDraft(
+															'sku',
+															e.target.value
+														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
 												/>
@@ -621,8 +666,9 @@ export default function SalesOrderDetails() {
 													onChange={(e) =>
 														updateEditingDraft(
 															'rate',
-															Number.parseFloat(e.target.value) ||
-																0
+															Number.parseFloat(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -632,19 +678,26 @@ export default function SalesOrderDetails() {
 											)}
 										</TableCell>
 										<TableCell className="text-gray-300">
-											{editingRowIndex === idx && editingDraft
-												? amountFor(editingDraft).toFixed(2)
+											{editingRowIndex === idx &&
+											editingDraft
+												? amountFor(
+														editingDraft
+												  ).toFixed(2)
 												: amountFor(line).toFixed(2)}
 										</TableCell>
 										<TableCell className="text-gray-300">
 											{editingRowIndex === idx ? (
 												<Input
 													type="number"
-													value={editingDraft!.overhead}
+													value={
+														editingDraft!.overhead
+													}
 													onChange={(e) =>
 														updateEditingDraft(
 															'overhead',
-															Number(e.target.value) || 0
+															Number(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -657,11 +710,15 @@ export default function SalesOrderDetails() {
 											{editingRowIndex === idx ? (
 												<Input
 													type="number"
-													value={editingDraft!.adjustment}
+													value={
+														editingDraft!.adjustment
+													}
 													onChange={(e) =>
 														updateEditingDraft(
 															'adjustment',
-															Number(e.target.value) || 0
+															Number(
+																e.target.value
+															) || 0
 														)
 													}
 													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
@@ -766,6 +823,7 @@ export default function SalesOrderDetails() {
 										lookupCode="SORD_FHPGD_Item"
 										value={addSelectedItem}
 										onChange={handleAddItemChange}
+										items={lookups?.items}
 									/>
 								</div>
 							</div>
@@ -776,6 +834,7 @@ export default function SalesOrderDetails() {
 										lookupCode="SORD_FHPGD_BF"
 										value={addSelectedBf}
 										onChange={handleAddBfChange}
+										items={lookups?.bfs}
 									/>
 								</div>
 							</div>
@@ -786,6 +845,7 @@ export default function SalesOrderDetails() {
 										lookupCode="SORD_FHPGD_GSM"
 										value={addSelectedGsm}
 										onChange={handleAddGsmChange}
+										items={lookups?.gsms}
 									/>
 								</div>
 							</div>
@@ -832,6 +892,7 @@ export default function SalesOrderDetails() {
 										lookupCode="SORD_FHPGD_SizeUnit"
 										value={addSelectedUnit}
 										onChange={handleAddUnitChange}
+										items={lookups?.sizeUnits}
 									/>
 								</div>
 							</div>
@@ -846,6 +907,7 @@ export default function SalesOrderDetails() {
 										lookupCode="SORD_FHPGD_Grain"
 										value={addSelectedGrain}
 										onChange={handleAddGrainChange}
+										items={lookups?.grains}
 									/>
 								</div>
 							</div>

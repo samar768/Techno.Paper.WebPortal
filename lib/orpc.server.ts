@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { headers } from 'next/headers';
 import { createRouterClient } from '@orpc/server';
 import { router } from '../router/';
+import type { RouterClient } from '@orpc/server';
 
 globalThis.$client = createRouterClient(router, {
 	/**
@@ -12,7 +12,9 @@ globalThis.$client = createRouterClient(router, {
 	 * only include context that's safe to reuse globally.
 	 * For per-request context, use middleware context or pass a function as the initial context.
 	 */
-	context: async () => ({
-		headers: await headers(), // provide headers if initial context required
-	}),
+	context: async () => ({}),
 });
+
+export const orpcServerClient = globalThis.$client as RouterClient<
+	typeof router
+>;

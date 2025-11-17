@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { TopNav } from '@/components/top-nav';
 import { Toaster } from '@/components/ui/sonner';
@@ -28,7 +28,15 @@ export default function DashboardLayout({
 					}`}
 				>
 					<TopNav collapsed={collapsed} />
-					<main className="flex-1 p-6 min-w-0">{children}</main>
+					<main className="flex-1 p-6 min-w-0">
+						<Suspense
+							fallback={
+								<div className="text-white">Loading...</div>
+							}
+						>
+							{children}
+						</Suspense>
+					</main>
 				</div>
 			</div>
 			<Toaster richColors />

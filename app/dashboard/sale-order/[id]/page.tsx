@@ -1,8 +1,5 @@
-'use client';
-
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { saleOrdersById } from '../data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,17 +7,49 @@ import SalesOrderHeader from '@/features/sales-order/SalesOrderHeader';
 import SalesOrderDetails from '@/features/sales-order/SalesOrderDetails';
 import SalesOrderTermsConditions from '@/features/sales-order/SalesOrderTermsConditions';
 import SalesOrderExpenses from '@/features/sales-order/SalesOrderExpenses';
-import SalesOrderFooterOption1, {
-	SalesOrderFooterOption2,
-} from '@/features/sales-order/SalesOrderFooter';
-import { SalesOrderFooter2 } from '@/features/sales-order/SalesOrderFooter2';
+import SalesOrderFooterOption1 from '@/features/sales-order/SalesOrderFooter';
+import { getSaleOrderLookups } from '@/lib/lookups';
+import type { SaleOrderLookups } from '@/lib/lookup-types';
 
-export default function SaleOrderDetailPage() {
-	const params = useParams();
-	const rawId = String(params?.id ?? '');
-	const id = decodeURIComponent(rawId);
+function SectionSkeleton({ title }: { title: string }) {
+	return (
+		<Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+			<CardHeader>
+				<CardTitle className="text-white">{title}</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<div className="h-20 animate-pulse bg-gray-800/50 rounded" />
+			</CardContent>
+		</Card>
+	);
+}
 
-	const order = useMemo(() => saleOrdersById[id], [id]);
+async function HeaderSection({
+	lookupsPromise,
+}: {
+	lookupsPromise: Promise<SaleOrderLookups>;
+}) {
+	const lookups = await lookupsPromise;
+	return <SalesOrderHeader lookups={lookups} />;
+}
+
+async function DetailsSection({
+	lookupsPromise,
+}: {
+	lookupsPromise: Promise<SaleOrderLookups>;
+}) {
+	const lookups = await lookupsPromise;
+	return <SalesOrderDetails lookups={lookups} />;
+}
+
+export default async function SaleOrderDetailPage({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}) {
+	const { id: rawId } = await params;
+	const id = decodeURIComponent(rawId ?? '');
+	const order = saleOrdersById[id];
 
 	if (!order) {
 		return (
@@ -49,12 +78,24 @@ export default function SaleOrderDetailPage() {
 		);
 	}
 
+	const lookupsPromise = getSaleOrderLookups();
+
 	return (
 		<>
 			<div className="pb-16">
-				<SalesOrderHeader />
+				<Suspense
+					fallback={
+						<SectionSkeleton title="Sale Order Information" />
+					}
+				>
+					<HeaderSection lookupsPromise={lookupsPromise} />
+				</Suspense>
 				<br />
-				<SalesOrderDetails />
+				<Suspense
+					fallback={<SectionSkeleton title="Sales Order Details" />}
+				>
+					<DetailsSection lookupsPromise={lookupsPromise} />
+				</Suspense>
 				<br />
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 					<SalesOrderTermsConditions />
@@ -62,22 +103,6 @@ export default function SaleOrderDetailPage() {
 				</div>
 				<SalesOrderFooterOption1 />
 			</div>
-
-			{/*<SalesOrderFooterOption2 />*/}
-
-			{/*<main className="flex min-h-screen flex-col items-center justify-center p-4">
-				<div className="text-center space-y-4 max-w-2xl">
-					<h1 className="text-4xl font-bold tracking-tight">
-						Floating Dock Menu
-					</h1>
-					<p className="text-lg text-muted-foreground">
-						Check out the dock menu fixed at the bottom of your
-						screen. It features responsive design and smooth
-						interactions.
-					</p>
-				</div>
-				<SalesOrderFooter2 />
-			</main>*/}
 		</>
 	);
 }

@@ -13,17 +13,14 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-	Command,
-	CommandEmpty,
-	CommandInput,
-} from '@/components/ui/command';
+import { Command, CommandEmpty, CommandInput } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 
 interface LookupSelectProps {
 	lookupCode: string;
 	value?: NormalizedLookup | null;
 	onChange?: (value: NormalizedLookup | null) => void;
+	items?: NormalizedLookup[];
 }
 
 /**
@@ -301,16 +298,13 @@ function LookupCombobox({
 									return (
 										<tr
 											key={`${item.Code}-${rowIndex}`}
-											onClick={() =>
-												handleSelect(item)
-											}
+											onClick={() => handleSelect(item)}
 											className={cn(
 												'cursor-pointer hover:bg-muted/70',
 												rowIndex % 2 === 0
 													? 'bg-background'
 													: 'bg-muted/30',
-												isSelected &&
-													'bg-primary/10'
+												isSelected && 'bg-primary/10'
 											)}
 										>
 											<td className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap">
@@ -319,23 +313,20 @@ function LookupCombobox({
 											<td className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap">
 												{item.Description}
 											</td>
-											{dynamicHeaders.map(
-												(header) => {
-													const value =
-														getValueForHeader(
-															item as any,
-															header
-														);
-													return (
-														<td
-															key={`${item.Code}-${header}`}
-															className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap"
-														>
-															{value || ''}
-														</td>
-													);
-												}
-											)}
+											{dynamicHeaders.map((header) => {
+												const value = getValueForHeader(
+													item as any,
+													header
+												);
+												return (
+													<td
+														key={`${item.Code}-${header}`}
+														className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap"
+													>
+														{value || ''}
+													</td>
+												);
+											})}
 										</tr>
 									);
 								})}
@@ -352,12 +343,24 @@ function LookupCombobox({
  * LookupSelect component that fetches lookup data based on lookupCode
  * and provides a searchable combobox.
  */
-export function LookupSelect({ lookupCode, value, onChange }: LookupSelectProps) {
-	const [items, setItems] = useState<NormalizedLookup[]>([]);
-	const [loading, setLoading] = useState(true);
+export function LookupSelect({
+	lookupCode,
+	value,
+	onChange,
+	items: injectedItems,
+}: LookupSelectProps) {
+	const [items, setItems] = useState<NormalizedLookup[]>(injectedItems ?? []);
+	const [loading, setLoading] = useState(injectedItems === undefined);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		if (injectedItems !== undefined) {
+			setItems(injectedItems);
+			setLoading(false);
+			setError(null);
+			return;
+		}
+
 		let isMounted = true;
 
 		async function load() {
@@ -395,11 +398,15 @@ export function LookupSelect({ lookupCode, value, onChange }: LookupSelectProps)
 		return () => {
 			isMounted = false;
 		};
-	}, [lookupCode]);
+	}, [lookupCode, injectedItems]);
 
 	if (loading) {
 		return (
-			<Button variant="outline" disabled className="w-full justify-between">
+			<Button
+				variant="outline"
+				disabled
+				className="w-full justify-between"
+			>
 				Loading...
 				<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 			</Button>
@@ -408,7 +415,11 @@ export function LookupSelect({ lookupCode, value, onChange }: LookupSelectProps)
 
 	if (error) {
 		return (
-			<Button variant="outline" disabled className="w-full justify-between">
+			<Button
+				variant="outline"
+				disabled
+				className="w-full justify-between"
+			>
 				Error loading data
 				<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 			</Button>
