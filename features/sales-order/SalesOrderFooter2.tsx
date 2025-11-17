@@ -111,7 +111,7 @@ export function SalesOrderFooter2() {
 			aria-label="Floating dock menu"
 		>
 			<div className="flex flex-col gap-4 px-4 py-4 bg-white border border-border rounded-2xl shadow-lg dark:bg-primary dark:border-border w-[95vw] sm:w-auto max-w-2xl">
-				{/* Icons Section */}
+				{/* Icons Section
 				<div className="flex items-center gap-3 flex-wrap justify-center">
 					{dockItems.map((item, index) => {
 						if (item.type === 'divider') {
@@ -164,9 +164,9 @@ export function SalesOrderFooter2() {
 							</button>
 						);
 					})}
-				</div>
+				</div> */}
 
-				{/* Divider between icons and buttons */}
+				{/* Divider between icons and buttons
 				<div className="w-full h-px bg-border dark:bg-border opacity-50" />
 
 				<div className="flex flex-wrap gap-2 justify-center w-full">
@@ -198,7 +198,7 @@ export function SalesOrderFooter2() {
 							)}
 						</div>
 					))}
-				</div>
+				</div> */}
 			</div>
 		</nav>
 	);
