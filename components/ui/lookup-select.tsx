@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { orpcClient } from '@/lib/orpc';
 import {
 	normalizeLookup,
@@ -143,11 +143,19 @@ function LookupCombobox({
 	selected: NormalizedLookup | null;
 	onSelect: (item: NormalizedLookup) => void;
 }) {
+	const ROW_HEIGHT = 36;
+	const DEFAULT_VISIBLE_COUNT = 8;
+	const OVERSCAN = 4;
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState('');
+	const [scrollTop, setScrollTop] = useState(0);
+	const [containerHeight, setContainerHeight] = useState(
+		ROW_HEIGHT * DEFAULT_VISIBLE_COUNT
+	);
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	// Derive union of all ColumnHeaders used by any item.
-	function extractHeadersFromItem(it: any): string[] {
+	const extractHeadersFromItem = useCallback((it: any): string[] => {
 		if (Array.isArray(it?.ColumnHeaders) && it.ColumnHeaders.length > 0) {
 			return it.ColumnHeaders.map((h: any) =>
 				(h ?? '').toString().trim()
@@ -169,9 +177,9 @@ function LookupCombobox({
 		}
 
 		return [];
-	}
+	}, []);
 
-	function getValueForHeader(it: any, header: string): string {
+	const getValueForHeader = useCallback((it: any, header: string): string => {
 		if (!it) return '';
 
 		if (
@@ -214,29 +222,112 @@ function LookupCombobox({
 		}
 
 		return '';
-	}
+	}, []);
 
-	const dynamicHeaders: string[] = Array.from(
-		items.reduce((set, item) => {
-			for (const h of extractHeadersFromItem(item)) {
-				if (h && h.length > 0) set.add(h);
-			}
-			return set;
-		}, new Set<string>())
+	const dynamicHeaders: string[] = useMemo(
+		() =>
+			Array.from(
+				items.reduce((set, item) => {
+					for (const h of extractHeadersFromItem(item)) {
+						if (h && h.length > 0) set.add(h);
+					}
+					return set;
+				}, new Set<string>())
+			),
+		[extractHeadersFromItem, items]
 	);
 
-	const filteredItems = items.filter((item) => {
-		if (!search.trim()) return true;
+	const filteredItems = useMemo(() => {
+		if (!search.trim()) return items;
 		const term = search.toLowerCase();
 
-		const inCode = item.Code.toLowerCase().includes(term);
-		const inDescription = item.Description.toLowerCase().includes(term);
-		const inAdditional = (item.Additional || []).some((val) =>
-			(val || '').toLowerCase().includes(term)
-		);
+		return items.filter((item) => {
+			const inCode = item.Code.toLowerCase().includes(term);
+			const inDescription = item.Description.toLowerCase().includes(term);
+			const inAdditional = (item.Additional || []).some((val) =>
+				(val || '').toLowerCase().includes(term)
+			);
 
-		return inCode || inDescription || inAdditional;
-	});
+			return inCode || inDescription || inAdditional;
+		});
+	}, [items, search]);
+
+	const totalCount = filteredItems.length;
+	const columnCount = 2 + dynamicHeaders.length;
+	const totalHeight = totalCount * ROW_HEIGHT;
+	const itemsPerViewport = Math.max(
+		1,
+		Math.ceil(containerHeight / ROW_HEIGHT)
+	);
+	const startIndex = Math.max(
+		0,
+		Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN
+	);
+	const endIndex = Math.min(
+		totalCount,
+		startIndex + itemsPerViewport + OVERSCAN * 2
+	);
+	const visibleItems = filteredItems.slice(startIndex, endIndex);
+	const offsetTop = startIndex * ROW_HEIGHT;
+	const bottomPadding = Math.max(
+		0,
+		totalHeight - offsetTop - visibleItems.length * ROW_HEIGHT
+	);
+
+	const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+		setScrollTop(event.currentTarget.scrollTop);
+	}, []);
+
+	useEffect(() => {
+		if (!open) return;
+
+		const node = scrollContainerRef.current;
+		if (!node) return;
+
+		const updateHeight = () => {
+			setContainerHeight(
+				node.clientHeight || ROW_HEIGHT * DEFAULT_VISIBLE_COUNT
+			);
+		};
+
+		updateHeight();
+
+		let resizeObserver: ResizeObserver | null = null;
+
+		if (typeof ResizeObserver !== 'undefined') {
+			resizeObserver = new ResizeObserver(updateHeight);
+			resizeObserver.observe(node);
+		} else {
+			window.addEventListener('resize', updateHeight);
+		}
+
+		return () => {
+			if (resizeObserver) {
+				resizeObserver.disconnect();
+			} else {
+				window.removeEventListener('resize', updateHeight);
+			}
+		};
+	}, [DEFAULT_VISIBLE_COUNT, ROW_HEIGHT, open]);
+
+	useEffect(() => {
+		if (!open) return;
+		const node = scrollContainerRef.current;
+		if (node) {
+			node.scrollTop = 0;
+		}
+		setScrollTop(0);
+	}, [open, search]);
+
+	useEffect(() => {
+		const maxScroll = Math.max(0, totalHeight - containerHeight);
+		if (scrollTop > maxScroll) {
+			setScrollTop(maxScroll);
+			if (scrollContainerRef.current) {
+				scrollContainerRef.current.scrollTop = maxScroll;
+			}
+		}
+	}, [containerHeight, scrollTop, totalHeight]);
 
 	const handleSelect = (item: NormalizedLookup) => {
 		onSelect(item);
@@ -266,73 +357,117 @@ function LookupCombobox({
 						value={search}
 						onValueChange={setSearch}
 					/>
-					<CommandEmpty>No results found.</CommandEmpty>
-					<div className="max-h-80 overflow-auto">
-						<table className="min-w-full border-collapse text-xs">
-							<thead className="bg-muted">
-								<tr>
-									<th className="px-2 py-1 text-left font-semibold text-foreground border-b border-border whitespace-nowrap">
-										Code
-									</th>
-									<th className="px-2 py-1 text-left font-semibold text-foreground border-b border-border whitespace-nowrap">
-										Description
-									</th>
-									{dynamicHeaders.map((header) => (
-										<th
-											key={header}
-											className="px-2 py-1 text-left font-semibold text-foreground border-b border-border whitespace-nowrap"
-										>
-											{header}
+					{totalCount === 0 ? (
+						<CommandEmpty>No results found.</CommandEmpty>
+					) : (
+						<div
+							className="max-h-80 overflow-auto"
+							onScroll={handleScroll}
+							ref={scrollContainerRef}
+						>
+							<table className="min-w-full border-collapse text-xs">
+								<thead className="bg-muted">
+									<tr>
+										<th className="px-2 py-1 text-left font-semibold text-foreground border-b border-border whitespace-nowrap">
+											Code
 										</th>
-									))}
-								</tr>
-							</thead>
-							<tbody>
-								{filteredItems.map((item, rowIndex) => {
-									const isSelected =
-										!!selected &&
-										selected.Code === item.Code &&
-										selected.Description ===
-											item.Description;
-
-									return (
+										<th className="px-2 py-1 text-left font-semibold text-foreground border-b border-border whitespace-nowrap">
+											Description
+										</th>
+										{dynamicHeaders.map((header) => (
+											<th
+												key={header}
+												className="px-2 py-1 text-left font-semibold text-foreground border-b border-border whitespace-nowrap"
+											>
+												{header}
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody>
+									{offsetTop > 0 && (
 										<tr
-											key={`${item.Code}-${rowIndex}`}
-											onClick={() => handleSelect(item)}
-											className={cn(
-												'cursor-pointer hover:bg-muted/70',
-												rowIndex % 2 === 0
-													? 'bg-background'
-													: 'bg-muted/30',
-												isSelected && 'bg-primary/10'
-											)}
+											aria-hidden="true"
+											className="pointer-events-none"
 										>
-											<td className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap">
-												{item.Code}
-											</td>
-											<td className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap">
-												{item.Description}
-											</td>
-											{dynamicHeaders.map((header) => {
-												const value = getValueForHeader(
-													item as any,
-													header
-												);
-												return (
-													<td
-														key={`${item.Code}-${header}`}
-														className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap"
-													>
-														{value || ''}
-													</td>
-												);
-											})}
+											<td
+												colSpan={columnCount}
+												style={{
+													height: offsetTop,
+													padding: 0,
+												}}
+											/>
 										</tr>
-									);
-								})}
-							</tbody>
-						</table>
-					</div>
+									)}
+									{visibleItems.map((item, virtualIndex) => {
+										const rowIndex =
+											startIndex + virtualIndex;
+										const isSelected =
+											!!selected &&
+											selected.Code === item.Code &&
+											selected.Description ===
+												item.Description;
+
+										return (
+											<tr
+												key={`${item.Code}-${rowIndex}`}
+												onClick={() =>
+													handleSelect(item)
+												}
+												className={cn(
+													'cursor-pointer hover:bg-muted/70',
+													rowIndex % 2 === 0
+														? 'bg-background'
+														: 'bg-muted/30',
+													isSelected &&
+														'bg-primary/10'
+												)}
+												style={{ height: ROW_HEIGHT }}
+											>
+												<td className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap">
+													{item.Code}
+												</td>
+												<td className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap">
+													{item.Description}
+												</td>
+												{dynamicHeaders.map(
+													(header) => {
+														const value =
+															getValueForHeader(
+																item as any,
+																header
+															);
+														return (
+															<td
+																key={`${item.Code}-${header}`}
+																className="px-2 py-1 align-top border-b border-border text-foreground whitespace-nowrap"
+															>
+																{value || ''}
+															</td>
+														);
+													}
+												)}
+											</tr>
+										);
+									})}
+									{bottomPadding > 0 && (
+										<tr
+											aria-hidden="true"
+											className="pointer-events-none"
+										>
+											<td
+												colSpan={columnCount}
+												style={{
+													height: bottomPadding,
+													padding: 0,
+												}}
+											/>
+										</tr>
+									)}
+								</tbody>
+							</table>
+						</div>
+					)}
 				</Command>
 			</PopoverContent>
 		</Popover>
