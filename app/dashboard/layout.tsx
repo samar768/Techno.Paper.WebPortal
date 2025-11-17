@@ -17,29 +17,23 @@ export default function DashboardLayout({
 
 	return (
 		<div className="min-h-screen w-full overflow-x-hidden bg-linear-to-br from-purple-950 via-purple-800 to-purple-600">
-			<div className="flex min-h-screen min-w-0">
-				<AppSidebar
-					collapsed={collapsed}
-					onToggle={() => setCollapsed((v) => !v)}
-				/>
-				<div
-					className={`flex-1 min-w-0 flex flex-col ${
-						collapsed ? 'ml-16' : 'ml-64'
-					}`}
-				>
-					<TopNav collapsed={collapsed} />
-					<main className="flex-1 p-6 min-w-0">
-						<Suspense
-							fallback={
-								<div className="text-white">Loading...</div>
-							}
-						>
-							{children}
-						</Suspense>
-					</main>
+			<Suspense fallback={<div>Loading...</div>}>
+				<div className="flex min-h-screen min-w-0">
+					<AppSidebar
+						collapsed={collapsed}
+						onToggle={() => setCollapsed((v) => !v)}
+					/>
+					<div
+						className={`flex-1 min-w-0 flex flex-col ${
+							collapsed ? 'ml-16' : 'ml-64'
+						}`}
+					>
+						<TopNav collapsed={collapsed} />
+						<main className="flex-1 p-6 min-w-0">{children}</main>
+					</div>
 				</div>
-			</div>
-			<Toaster richColors />
+				<Toaster richColors />
+			</Suspense>
 		</div>
 	);
 }
