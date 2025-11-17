@@ -26,14 +26,7 @@ import {
 	TableFooter,
 	TableRow,
 } from '@/components/ui/table';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Plus, Trash2 } from 'lucide-react';
 import { LookupSelect } from '@/components/ui/lookup-select';
 import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
@@ -214,24 +207,55 @@ function LookupCell<TKey extends keyof SalesOrderLine>({
 
 const defaultLine: SalesOrderLine = {
 	itemCode: '',
-	itemName: 'Kraft Paper',
+	itemName: '',
 	description: '',
-	bf: '14',
+	bf: '',
 	width: 0,
 	length: 0,
-	unit: 'CM',
-	grain: 'Long',
-	gsm: '80',
-	reelPerPack: 1,
+	unit: '',
+	grain: '',
+	gsm: '',
+	reelPerPack: 0,
 	weightSecUnit: 0,
 	secUnit: 'Kg.',
 	weightSku: 0,
 	tolerance: 'Y',
-	sku: 'Kg.',
-	rate: 25,
+	sku: '',
+	rate: 0,
 	overhead: 0,
 	adjustment: 0,
 };
+
+const seededLines: SalesOrderLine[] = [
+	{
+		...defaultLine,
+		itemCode: 'KP-001',
+		itemName: 'Kraft Paper',
+		bf: '14',
+		width: 120,
+		length: 150,
+		unit: 'CM',
+		grain: 'Long',
+		gsm: '80',
+		reelPerPack: 6,
+		weightSku: 3450,
+		rate: 25,
+	},
+	{
+		...defaultLine,
+		itemCode: 'KP-002',
+		itemName: 'Kraft Paper B',
+		bf: '16',
+		width: 100,
+		length: 120,
+		unit: 'CM',
+		grain: 'Short',
+		gsm: '90',
+		reelPerPack: 3,
+		weightSku: 1700,
+		rate: 25,
+	},
+];
 
 const createLookupValue = (
 	code?: string,
@@ -259,31 +283,8 @@ export default function SalesOrderDetails({
 }: {
 	lookups?: SaleOrderLookups;
 }) {
-	const [lines, setLines] = useState<SalesOrderLine[]>([
-		{
-			...defaultLine,
-			reelPerPack: 6,
-			weightSku: 3450,
-			rate: 25,
-			overhead: 0,
-			adjustment: 0,
-		},
-		{ ...defaultLine, reelPerPack: 3, weightSku: 1700, rate: 25 },
-	]);
+	const [lines, setLines] = useState<SalesOrderLine[]>(seededLines);
 
-	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-	const [addDraft, setAddDraft] = useState<SalesOrderLine>(defaultLine);
-	const [addSelectedItem, setAddSelectedItem] =
-		useState<NormalizedLookup | null>(null);
-	const [addSelectedBf, setAddSelectedBf] = useState<NormalizedLookup | null>(
-		null
-	);
-	const [addSelectedUnit, setAddSelectedUnit] =
-		useState<NormalizedLookup | null>(null);
-	const [addSelectedGrain, setAddSelectedGrain] =
-		useState<NormalizedLookup | null>(null);
-	const [addSelectedGsm, setAddSelectedGsm] =
-		useState<NormalizedLookup | null>(null);
 	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
 	const editingRowRef = useRef<HTMLTableRowElement | null>(null);
 
@@ -305,38 +306,17 @@ export default function SalesOrderDetails({
 		return withOh + (Number(line.adjustment) || 0);
 	}, []);
 
-	const openAdd = useCallback(() => {
-		setAddDraft({ ...defaultLine });
-		setAddSelectedItem(null);
-		setAddSelectedBf(null);
-		setAddSelectedUnit(null);
-		setAddSelectedGrain(null);
-		setAddSelectedGsm(null);
-		setIsAddModalOpen(true);
+	const addRow = useCallback(() => {
+		setLines((prev) => {
+			const next = [...prev, { ...defaultLine }];
+			setEditingRowIndex(next.length - 1);
+			return next;
+		});
 	}, []);
 
 	const removeLine = useCallback((idx: number) => {
 		setLines((prev) => prev.filter((_, i) => i !== idx));
 	}, []);
-
-	const updateAddDraft = useCallback(
-		(field: keyof SalesOrderLine, value: string | number) => {
-			setAddDraft((prev) => ({ ...prev, [field]: value as never }));
-		},
-		[]
-	);
-
-	const saveAdd = useCallback(() => {
-		const newLine = { ...addDraft };
-		setLines((prev) => [...prev, newLine]);
-		setIsAddModalOpen(false);
-		setAddDraft({ ...defaultLine });
-		setAddSelectedItem(null);
-		setAddSelectedBf(null);
-		setAddSelectedUnit(null);
-		setAddSelectedGrain(null);
-		setAddSelectedGsm(null);
-	}, [addDraft]);
 
 	useEffect(() => {
 		if (editingRowIndex === null) return;
@@ -379,50 +359,6 @@ export default function SalesOrderDetails({
 		},
 		[]
 	);
-
-	const handleAddItemChange = useCallback((item: NormalizedLookup | null) => {
-		setAddSelectedItem(item);
-		setAddDraft((prev) => ({
-			...prev,
-			itemCode: item?.Code ?? '',
-			itemName: item?.Description ?? '',
-		}));
-	}, []);
-
-	const handleAddBfChange = useCallback((bf: NormalizedLookup | null) => {
-		setAddSelectedBf(bf);
-		setAddDraft((prev) => ({
-			...prev,
-			bf: bf?.Code ?? '',
-		}));
-	}, []);
-
-	const handleAddUnitChange = useCallback((unit: NormalizedLookup | null) => {
-		setAddSelectedUnit(unit);
-		setAddDraft((prev) => ({
-			...prev,
-			unit: unit?.Code ?? '',
-		}));
-	}, []);
-
-	const handleAddGrainChange = useCallback(
-		(grain: NormalizedLookup | null) => {
-			setAddSelectedGrain(grain);
-			setAddDraft((prev) => ({
-				...prev,
-				grain: grain?.Code ?? '',
-			}));
-		},
-		[]
-	);
-
-	const handleAddGsmChange = useCallback((gsm: NormalizedLookup | null) => {
-		setAddSelectedGsm(gsm);
-		setAddDraft((prev) => ({
-			...prev,
-			gsm: gsm?.Code ?? '',
-		}));
-	}, []);
 
 	const columns = useMemo<ColumnDef<SalesOrderLine>[]>(
 		() => [
@@ -653,7 +589,7 @@ export default function SalesOrderDetails({
 							Sales Order Details
 						</CardTitle>
 						<Button
-							onClick={openAdd}
+							onClick={addRow}
 							className="bg-purple-600 hover:bg-purple-700 text-white"
 						>
 							<Plus className="h-4 w-4 mr-1" /> Add Row
@@ -749,246 +685,6 @@ export default function SalesOrderDetails({
 					</div>
 				</CardContent>
 			</Card>
-
-			{/* Add Modal */}
-			<Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-				<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-3xl backdrop-blur-sm">
-					<DialogHeader>
-						<DialogTitle className="text-white">
-							Add Line
-						</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
-						{/* Row 1: Item Name, BF, GSM */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">
-									Item Name
-								</Label>
-								<div className="max-w-xs">
-									<LookupSelect
-										lookupCode="SORD_FHPGD_Item"
-										value={addSelectedItem}
-										onChange={handleAddItemChange}
-										items={lookups?.items}
-									/>
-								</div>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">BF</Label>
-								<div className="max-w-xs">
-									<LookupSelect
-										lookupCode="SORD_FHPGD_BF"
-										value={addSelectedBf}
-										onChange={handleAddBfChange}
-										items={lookups?.bfs}
-									/>
-								</div>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">GSM</Label>
-								<div className="max-w-xs">
-									<LookupSelect
-										lookupCode="SORD_FHPGD_GSM"
-										value={addSelectedGsm}
-										onChange={handleAddGsmChange}
-										items={lookups?.gsms}
-									/>
-								</div>
-							</div>
-						</div>
-
-						{/* Row 2: Width, Length, Unit */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">Width</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={addDraft.width.toFixed(2)}
-									onChange={(e) =>
-										updateAddDraft(
-											'width',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Length</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={addDraft.length.toFixed(2)}
-									onChange={(e) =>
-										updateAddDraft(
-											'length',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Unit</Label>
-								<div className="max-w-xs">
-									<LookupSelect
-										lookupCode="SORD_FHPGD_SizeUnit"
-										value={addSelectedUnit}
-										onChange={handleAddUnitChange}
-										items={lookups?.sizeUnits}
-									/>
-								</div>
-							</div>
-						</div>
-
-						{/* Row 3: Grain, Reel / Pack, Weight (SKU) */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">Grain</Label>
-								<div className="max-w-xs">
-									<LookupSelect
-										lookupCode="SORD_FHPGD_Grain"
-										value={addSelectedGrain}
-										onChange={handleAddGrainChange}
-										items={lookups?.grains}
-									/>
-								</div>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">
-									Reel / Pack
-								</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={addDraft.reelPerPack.toFixed(2)}
-									onChange={(e) =>
-										updateAddDraft(
-											'reelPerPack',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">
-									Weight (SKU)
-								</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={addDraft.weightSku.toFixed(2)}
-									onChange={(e) =>
-										updateAddDraft(
-											'weightSku',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-						</div>
-
-						{/* Row 4: Rate, OH, Adj */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">Rate</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={addDraft.rate.toFixed(2)}
-									onChange={(e) =>
-										updateAddDraft(
-											'rate',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">OH</Label>
-								<Input
-									type="number"
-									value={String(addDraft.overhead)}
-									onChange={(e) =>
-										updateAddDraft(
-											'overhead',
-											Number(e.target.value) || 0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Adj</Label>
-								<Input
-									type="number"
-									value={String(addDraft.adjustment)}
-									onChange={(e) =>
-										updateAddDraft(
-											'adjustment',
-											Number(e.target.value) || 0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-						</div>
-
-						{/* Row 5: SKU, Amount */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">SKU</Label>
-								<Input
-									value={addDraft.sku}
-									onChange={(e) =>
-										updateAddDraft('sku', e.target.value)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Amount</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={amountFor(addDraft).toFixed(2)}
-									readOnly
-									className="bg-purple-950/50 border-purple-700 text-white"
-								/>
-							</div>
-							<div className="space-y-2">
-								{/* Empty column to maintain 3-column layout */}
-							</div>
-						</div>
-
-						<div className="flex justify-end space-x-2 pt-2">
-							<Button
-								variant="outline"
-								onClick={() => setIsAddModalOpen(false)}
-								className="border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400 bg-gray-800"
-							>
-								Cancel
-							</Button>
-							<Button
-								onClick={saveAdd}
-								className="bg-purple-600 hover:bg-purple-700"
-							>
-								Save
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
 		</div>
 	);
 }
