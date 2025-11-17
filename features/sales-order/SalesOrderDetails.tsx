@@ -1,6 +1,20 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
+import {
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
+	type CellContext,
+	type ColumnDef,
+	type RowData,
+} from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -9,6 +23,7 @@ import {
 	TableCell,
 	TableHead,
 	TableHeader,
+	TableFooter,
 	TableRow,
 } from '@/components/ui/table';
 import {
@@ -19,14 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { LookupSelect } from '@/components/ui/lookup-select';
 import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
 import type { SaleOrderLookups } from '@/lib/lookup-types';
@@ -37,22 +45,172 @@ type SalesOrderLine = {
 	itemCode: string;
 	itemName: string;
 	description: string;
-	bf: string; // Burst Factor (dropdown)
-	width: number; // cm
-	length: number; // cm
+	bf: string;
+	width: number;
+	length: number;
 	unit: string;
-	grain: string; // dropdown
-	gsm: string; // dropdown
-	reelPerPack: number; // Quantity
-	weightSecUnit: number; // numeric only
-	secUnit: string; // e.g., Kg.
-	weightSku: number; // used for amount calc and total weight
+	grain: string;
+	gsm: string;
+	reelPerPack: number;
+	weightSecUnit: number;
+	secUnit: string;
+	weightSku: number;
 	tolerance: YesNo;
-	sku: string; // display only
-	rate: number; // price per Kg.
-	overhead: number; // OH
-	adjustment: number; // Adj
+	sku: string;
+	rate: number;
+	overhead: number;
+	adjustment: number;
 };
+
+declare module '@tanstack/react-table' {
+	interface TableMeta<TData extends RowData> {
+		updateData: (
+			rowIndex: number,
+			columnId: keyof SalesOrderLine,
+			value: SalesOrderLine[keyof SalesOrderLine]
+		) => void;
+	}
+}
+
+const editableInputClassName =
+	'w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0';
+
+type BaseCellProps<TKey extends keyof SalesOrderLine> = {
+	ctx: CellContext<SalesOrderLine, SalesOrderLine[TKey]>;
+	columnKey: TKey;
+	editingRowIndex: number | null;
+};
+
+type NumberCellProps<TKey extends keyof SalesOrderLine> =
+	BaseCellProps<TKey> & {
+		decimal?: boolean;
+	};
+
+function NumberCell<TKey extends keyof SalesOrderLine>({
+	ctx,
+	columnKey,
+	editingRowIndex,
+	decimal,
+}: NumberCellProps<TKey>) {
+	const { row, table } = ctx;
+	const isEditing = editingRowIndex === row.index;
+	const value = row.original[columnKey] as number | string | undefined;
+	if (!isEditing) {
+		const numericValue = Number(value ?? 0);
+		const displayValue = Number.isFinite(numericValue)
+			? numericValue.toFixed(decimal ? 2 : 0)
+			: '-';
+		return <span className="text-gray-300">{displayValue}</span>;
+	}
+
+	return (
+		<Input
+			type="number"
+			step={decimal ? '0.01' : '1'}
+			value={value ?? ''}
+			onChange={(event) => {
+				const parsed = Number.parseFloat(event.target.value);
+				table.options.meta?.updateData(
+					row.index,
+					columnKey,
+					(Number.isNaN(parsed)
+						? 0
+						: parsed) as SalesOrderLine[typeof columnKey]
+				);
+			}}
+			className={editableInputClassName}
+		/>
+	);
+}
+
+function TextCell<TKey extends keyof SalesOrderLine>({
+	ctx,
+	columnKey,
+	editingRowIndex,
+}: BaseCellProps<TKey>) {
+	const { row, table } = ctx;
+	const isEditing = editingRowIndex === row.index;
+	const value = (row.original[columnKey] as string | undefined) ?? '';
+	if (!isEditing) {
+		return <span className="text-gray-300">{value || '-'}</span>;
+	}
+
+	return (
+		<Input
+			value={value}
+			onChange={(event) =>
+				table.options.meta?.updateData(
+					row.index,
+					columnKey,
+					event.target.value as SalesOrderLine[typeof columnKey]
+				)
+			}
+			className={editableInputClassName}
+		/>
+	);
+}
+
+function LookupCell<TKey extends keyof SalesOrderLine>({
+	ctx,
+	columnKey,
+	lookupCode,
+	items,
+	editingRowIndex,
+	codeAccessor,
+	mapSelection,
+}: {
+	ctx: CellContext<SalesOrderLine, SalesOrderLine[TKey]>;
+	columnKey: TKey;
+	lookupCode: string;
+	items?: NormalizedLookup[];
+	editingRowIndex: number | null;
+	codeAccessor?: (line: SalesOrderLine) => string | undefined;
+	mapSelection?: (item: NormalizedLookup | null) => Partial<SalesOrderLine>;
+}) {
+	const { row, table } = ctx;
+	const isEditing = editingRowIndex === row.index;
+	const currentLine = row.original;
+	const columnValue = currentLine[columnKey] as string | undefined;
+	const codeValue = codeAccessor?.(currentLine) ?? columnValue;
+	const lookupValue = resolveLookupValue(items, codeValue, columnValue);
+
+	if (!isEditing) {
+		const displayValue =
+			lookupValue?.Description && lookupValue.Description.length > 0
+				? lookupValue.Description
+				: columnValue && columnValue.length > 0
+				? columnValue
+				: '-';
+		return <span className="text-gray-300">{displayValue}</span>;
+	}
+
+	const handleLookupChange = (item: NormalizedLookup | null) => {
+		const updates =
+			mapSelection?.(item) ??
+			({
+				[columnKey]: item?.Code ?? '',
+			} as Partial<SalesOrderLine>);
+
+		Object.entries(updates).forEach(([key, val]) => {
+			table.options.meta?.updateData(
+				row.index,
+				key as keyof SalesOrderLine,
+				val as SalesOrderLine[keyof SalesOrderLine]
+			);
+		});
+	};
+
+	return (
+		<div className="max-w-xs">
+			<LookupSelect
+				lookupCode={lookupCode}
+				value={lookupValue}
+				onChange={handleLookupChange}
+				items={items}
+			/>
+		</div>
+	);
+}
 
 const defaultLine: SalesOrderLine = {
 	itemCode: '',
@@ -75,6 +233,27 @@ const defaultLine: SalesOrderLine = {
 	adjustment: 0,
 };
 
+const createLookupValue = (
+	code?: string,
+	description?: string
+): NormalizedLookup | null => {
+	if (!code && !description) return null;
+	return {
+		Code: code ?? description ?? '',
+		Description: description ?? code ?? '',
+		ColumnHeaders: [],
+		Additional: [],
+	};
+};
+
+const resolveLookupValue = (
+	items: NormalizedLookup[] | undefined,
+	code?: string,
+	description?: string
+) =>
+	items?.find((item) => item.Code === code) ??
+	createLookupValue(code, description);
+
 export default function SalesOrderDetails({
 	lookups,
 }: {
@@ -94,32 +273,19 @@ export default function SalesOrderDetails({
 
 	const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 	const [addDraft, setAddDraft] = useState<SalesOrderLine>(defaultLine);
-
-	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
-	const [editingDraft, setEditingDraft] = useState<SalesOrderLine | null>(
-		null
-	);
 	const [addSelectedItem, setAddSelectedItem] =
-		useState<NormalizedLookup | null>(null);
-	const [editingSelectedItem, setEditingSelectedItem] =
 		useState<NormalizedLookup | null>(null);
 	const [addSelectedBf, setAddSelectedBf] = useState<NormalizedLookup | null>(
 		null
 	);
-	const [editingSelectedBf, setEditingSelectedBf] =
-		useState<NormalizedLookup | null>(null);
 	const [addSelectedUnit, setAddSelectedUnit] =
-		useState<NormalizedLookup | null>(null);
-	const [editingSelectedUnit, setEditingSelectedUnit] =
 		useState<NormalizedLookup | null>(null);
 	const [addSelectedGrain, setAddSelectedGrain] =
 		useState<NormalizedLookup | null>(null);
-	const [editingSelectedGrain, setEditingSelectedGrain] =
-		useState<NormalizedLookup | null>(null);
 	const [addSelectedGsm, setAddSelectedGsm] =
 		useState<NormalizedLookup | null>(null);
-	const [editingSelectedGsm, setEditingSelectedGsm] =
-		useState<NormalizedLookup | null>(null);
+	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+	const editingRowRef = useRef<HTMLTableRowElement | null>(null);
 
 	const totals = useMemo(() => {
 		const totalQuantity = lines.reduce(
@@ -149,65 +315,6 @@ export default function SalesOrderDetails({
 		setIsAddModalOpen(true);
 	}, []);
 
-	const openEdit = useCallback(
-		(idx: number) => {
-			const line = lines[idx];
-			setEditingRowIndex(idx);
-			setEditingDraft({ ...line });
-			setEditingSelectedItem(
-				line
-					? {
-							Code: line.itemCode || line.itemName,
-							Description: line.itemName,
-							ColumnHeaders: [],
-							Additional: [],
-					  }
-					: null
-			);
-			setEditingSelectedBf(
-				line
-					? {
-							Code: line.bf,
-							Description: line.bf,
-							ColumnHeaders: [],
-							Additional: [],
-					  }
-					: null
-			);
-			setEditingSelectedUnit(
-				line
-					? {
-							Code: line.unit,
-							Description: line.unit,
-							ColumnHeaders: [],
-							Additional: [],
-					  }
-					: null
-			);
-			setEditingSelectedGrain(
-				line
-					? {
-							Code: line.grain,
-							Description: line.grain,
-							ColumnHeaders: [],
-							Additional: [],
-					  }
-					: null
-			);
-			setEditingSelectedGsm(
-				line
-					? {
-							Code: line.gsm,
-							Description: line.gsm,
-							ColumnHeaders: [],
-							Additional: [],
-					  }
-					: null
-			);
-		},
-		[lines]
-	);
-
 	const removeLine = useCallback((idx: number) => {
 		setLines((prev) => prev.filter((_, i) => i !== idx));
 	}, []);
@@ -231,37 +338,43 @@ export default function SalesOrderDetails({
 		setAddSelectedGsm(null);
 	}, [addDraft]);
 
-	const saveEdit = useCallback(() => {
-		if (editingRowIndex !== null && editingDraft) {
-			setLines((prev) =>
-				prev.map((l, i) =>
-					i === editingRowIndex ? { ...editingDraft } : l
-				)
-			);
-		}
-		setEditingRowIndex(null);
-		setEditingDraft(null);
-		setEditingSelectedItem(null);
-		setEditingSelectedBf(null);
-		setEditingSelectedUnit(null);
-		setEditingSelectedGrain(null);
-		setEditingSelectedGsm(null);
-	}, [editingRowIndex, editingDraft]);
+	useEffect(() => {
+		if (editingRowIndex === null) return;
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (target.closest('[data-slot="popover-content"]')) {
+				return;
+			}
+			if (
+				editingRowRef.current &&
+				!editingRowRef.current.contains(target)
+			) {
+				setEditingRowIndex(null);
+			}
+		};
+		document.addEventListener('mousedown', handleClickOutside);
+		return () =>
+			document.removeEventListener('mousedown', handleClickOutside);
+	}, [editingRowIndex]);
 
-	const cancelEdit = useCallback(() => {
-		setEditingRowIndex(null);
-		setEditingDraft(null);
-		setEditingSelectedItem(null);
-		setEditingSelectedBf(null);
-		setEditingSelectedUnit(null);
-		setEditingSelectedGrain(null);
-		setEditingSelectedGsm(null);
+	const handleRowClick = useCallback((rowIndex: number) => {
+		setEditingRowIndex((current) =>
+			current === rowIndex ? current : rowIndex
+		);
 	}, []);
 
-	const updateEditingDraft = useCallback(
-		(field: keyof SalesOrderLine, value: string | number) => {
-			setEditingDraft((prev) =>
-				prev ? { ...prev, [field]: value as never } : null
+	const updateData = useCallback(
+		(
+			rowIndex: number,
+			columnId: keyof SalesOrderLine,
+			value: SalesOrderLine[keyof SalesOrderLine]
+		) => {
+			setLines((prev) =>
+				prev.map((row, idx) =>
+					idx === rowIndex
+						? { ...row, [columnId]: value as never }
+						: row
+				)
 			);
 		},
 		[]
@@ -276,40 +389,12 @@ export default function SalesOrderDetails({
 		}));
 	}, []);
 
-	const handleEditingItemChange = useCallback(
-		(item: NormalizedLookup | null) => {
-			setEditingSelectedItem(item);
-			setEditingDraft((prev) =>
-				prev
-					? {
-							...prev,
-							itemCode: item?.Code ?? '',
-							itemName: item?.Description ?? '',
-					  }
-					: prev
-			);
-		},
-		[]
-	);
-
 	const handleAddBfChange = useCallback((bf: NormalizedLookup | null) => {
 		setAddSelectedBf(bf);
 		setAddDraft((prev) => ({
 			...prev,
 			bf: bf?.Code ?? '',
 		}));
-	}, []);
-
-	const handleEditingBfChange = useCallback((bf: NormalizedLookup | null) => {
-		setEditingSelectedBf(bf);
-		setEditingDraft((prev) =>
-			prev
-				? {
-						...prev,
-						bf: bf?.Code ?? '',
-				  }
-				: prev
-		);
 	}, []);
 
 	const handleAddUnitChange = useCallback((unit: NormalizedLookup | null) => {
@@ -319,21 +404,6 @@ export default function SalesOrderDetails({
 			unit: unit?.Code ?? '',
 		}));
 	}, []);
-
-	const handleEditingUnitChange = useCallback(
-		(unit: NormalizedLookup | null) => {
-			setEditingSelectedUnit(unit);
-			setEditingDraft((prev) =>
-				prev
-					? {
-							...prev,
-							unit: unit?.Code ?? '',
-					  }
-					: prev
-			);
-		},
-		[]
-	);
 
 	const handleAddGrainChange = useCallback(
 		(grain: NormalizedLookup | null) => {
@@ -346,21 +416,6 @@ export default function SalesOrderDetails({
 		[]
 	);
 
-	const handleEditingGrainChange = useCallback(
-		(grain: NormalizedLookup | null) => {
-			setEditingSelectedGrain(grain);
-			setEditingDraft((prev) =>
-				prev
-					? {
-							...prev,
-							grain: grain?.Code ?? '',
-					  }
-					: prev
-			);
-		},
-		[]
-	);
-
 	const handleAddGsmChange = useCallback((gsm: NormalizedLookup | null) => {
 		setAddSelectedGsm(gsm);
 		setAddDraft((prev) => ({
@@ -369,20 +424,225 @@ export default function SalesOrderDetails({
 		}));
 	}, []);
 
-	const handleEditingGsmChange = useCallback(
-		(gsm: NormalizedLookup | null) => {
-			setEditingSelectedGsm(gsm);
-			setEditingDraft((prev) =>
-				prev
-					? {
-							...prev,
-							gsm: gsm?.Code ?? '',
-					  }
-					: prev
-			);
-		},
-		[]
+	const columns = useMemo<ColumnDef<SalesOrderLine>[]>(
+		() => [
+			{
+				id: 'serial',
+				header: () => <span className="text-gray-300">S. No.</span>,
+				cell: ({ row }) => (
+					<span className="text-white">{row.index + 1}</span>
+				),
+			},
+			{
+				accessorKey: 'itemName',
+				header: () => <span className="text-gray-300">Item Name</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="itemName"
+						lookupCode="SORD_FHPGD_Item"
+						items={lookups?.items}
+						editingRowIndex={editingRowIndex}
+						codeAccessor={(line) => line.itemCode}
+						mapSelection={(item) => ({
+							itemName: item?.Description ?? '',
+							itemCode: item?.Code ?? '',
+						})}
+					/>
+				),
+			},
+			{
+				accessorKey: 'bf',
+				header: () => <span className="text-gray-300">BF</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="bf"
+						lookupCode="SORD_FHPGD_BF"
+						items={lookups?.bfs}
+						editingRowIndex={editingRowIndex}
+						mapSelection={(item) => ({ bf: item?.Code ?? '' })}
+					/>
+				),
+			},
+			{
+				accessorKey: 'width',
+				header: () => <span className="text-gray-300">Width</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="width"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'length',
+				header: () => <span className="text-gray-300">Length</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="length"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'unit',
+				header: () => <span className="text-gray-300">Unit</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="unit"
+						lookupCode="SORD_FHPGD_SizeUnit"
+						items={lookups?.sizeUnits}
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'grain',
+				header: () => <span className="text-gray-300">Grain</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="grain"
+						lookupCode="SORD_FHPGD_Grain"
+						items={lookups?.grains}
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'gsm',
+				header: () => <span className="text-gray-300">GSM</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="gsm"
+						lookupCode="SORD_FHPGD_GSM"
+						items={lookups?.gsms}
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'reelPerPack',
+				header: () => (
+					<span className="text-gray-300">Reel / Pack</span>
+				),
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="reelPerPack"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'weightSku',
+				header: () => (
+					<span className="text-gray-300">Weight (SKU)</span>
+				),
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="weightSku"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'sku',
+				header: () => <span className="text-gray-300">SKU</span>,
+				cell: (ctx) => (
+					<TextCell
+						ctx={ctx}
+						columnKey="sku"
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'rate',
+				header: () => <span className="text-gray-300">Rate</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="rate"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				id: 'amount',
+				header: () => <span className="text-gray-300">Amount</span>,
+				cell: ({ row }) => (
+					<span className="text-gray-300">
+						{amountFor(row.original).toFixed(2)}
+					</span>
+				),
+			},
+			{
+				accessorKey: 'overhead',
+				header: () => <span className="text-gray-300">OH</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="overhead"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'adjustment',
+				header: () => <span className="text-gray-300">Adj</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="adjustment"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				id: 'actions',
+				header: () => <span className="text-gray-300">Actions</span>,
+				cell: ({ row }) => (
+					<div className="flex space-x-2">
+						<Button
+							size="sm"
+							variant="ghost"
+							onClick={(e) => {
+								e.stopPropagation();
+								removeLine(row.index);
+							}}
+							className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
+						>
+							<Trash2 className="h-4 w-4" />
+						</Button>
+					</div>
+				),
+			},
+		],
+		[editingRowIndex, lookups, amountFor, removeLine]
 	);
+
+	const table = useReactTable({
+		data: lines,
+		columns,
+		getCoreRowModel: getCoreRowModel(),
+		meta: {
+			updateData,
+		},
+	});
 
 	return (
 		<div className="space-y-4">
@@ -404,400 +664,87 @@ export default function SalesOrderDetails({
 					<div className="rounded-lg border border-purple-900 overflow-hidden">
 						<Table>
 							<TableHeader>
-								<TableRow className="bg-gray-800/50 border-purple-900 hover:bg-gray-800/50">
-									<TableHead className="text-gray-300">
-										S. No.
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Item Name
-									</TableHead>
-									<TableHead className="text-gray-300">
-										BF
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Width
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Length
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Unit
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Grain
-									</TableHead>
-									<TableHead className="text-gray-300">
-										GSM
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Reel / Pack
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Weight (SKU)
-									</TableHead>
-									<TableHead className="text-gray-300">
-										SKU
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Rate
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Amount
-									</TableHead>
-									<TableHead className="text-gray-300">
-										OH
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Adj
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Actions
-									</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{lines.map((line, idx) => (
+								{table.getHeaderGroups().map((headerGroup) => (
 									<TableRow
-										key={idx}
-										className="border-purple-900 hover:bg-gray-800/30"
+										key={headerGroup.id}
+										className="bg-gray-800/50 border-purple-900 hover:bg-gray-800/50"
 									>
-										<TableCell className="text-white">
-											{idx + 1}
-										</TableCell>
-										<TableCell className="text-gray-200">
-											{editingRowIndex === idx ? (
-												<div className="max-w-xs">
-													<LookupSelect
-														lookupCode="SORD_FHPGD_Item"
-														value={
-															editingSelectedItem
-														}
-														onChange={
-															handleEditingItemChange
-														}
-														items={lookups?.items}
-													/>
-												</div>
-											) : (
-												line.itemName
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<div className="max-w-xs">
-													<LookupSelect
-														lookupCode="SORD_FHPGD_BF"
-														value={
-															editingSelectedBf
-														}
-														onChange={
-															handleEditingBfChange
-														}
-														items={lookups?.bfs}
-													/>
-												</div>
-											) : (
-												line.bf
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													step="0.01"
-													value={editingDraft!.width}
-													onChange={(e) =>
-														updateEditingDraft(
-															'width',
-															Number.parseFloat(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.width.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													step="0.01"
-													value={editingDraft!.length}
-													onChange={(e) =>
-														updateEditingDraft(
-															'length',
-															Number.parseFloat(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.length.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<div className="max-w-xs">
-													<LookupSelect
-														lookupCode="SORD_FHPGD_SizeUnit"
-														value={
-															editingSelectedUnit
-														}
-														onChange={
-															handleEditingUnitChange
-														}
-														items={
-															lookups?.sizeUnits
-														}
-													/>
-												</div>
-											) : (
-												line.unit
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<div className="max-w-xs">
-													<LookupSelect
-														lookupCode="SORD_FHPGD_Grain"
-														value={
-															editingSelectedGrain
-														}
-														onChange={
-															handleEditingGrainChange
-														}
-														items={lookups?.grains}
-													/>
-												</div>
-											) : (
-												line.grain
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<div className="max-w-xs">
-													<LookupSelect
-														lookupCode="SORD_FHPGD_GSM"
-														value={
-															editingSelectedGsm
-														}
-														onChange={
-															handleEditingGsmChange
-														}
-														items={lookups?.gsms}
-													/>
-												</div>
-											) : (
-												line.gsm
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													step="0.01"
-													value={
-														editingDraft!
-															.reelPerPack
-													}
-													onChange={(e) =>
-														updateEditingDraft(
-															'reelPerPack',
-															Number.parseFloat(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.reelPerPack.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													step="0.01"
-													value={
-														editingDraft!.weightSku
-													}
-													onChange={(e) =>
-														updateEditingDraft(
-															'weightSku',
-															Number.parseFloat(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.weightSku.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													value={editingDraft!.sku}
-													onChange={(e) =>
-														updateEditingDraft(
-															'sku',
-															e.target.value
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.sku
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													step="0.01"
-													value={editingDraft!.rate}
-													onChange={(e) =>
-														updateEditingDraft(
-															'rate',
-															Number.parseFloat(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.rate.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx &&
-											editingDraft
-												? amountFor(
-														editingDraft
-												  ).toFixed(2)
-												: amountFor(line).toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													value={
-														editingDraft!.overhead
-													}
-													onChange={(e) =>
-														updateEditingDraft(
-															'overhead',
-															Number(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.overhead.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{editingRowIndex === idx ? (
-												<Input
-													type="number"
-													value={
-														editingDraft!.adjustment
-													}
-													onChange={(e) =>
-														updateEditingDraft(
-															'adjustment',
-															Number(
-																e.target.value
-															) || 0
-														)
-													}
-													className="w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0"
-												/>
-											) : (
-												line.adjustment.toFixed(2)
-											)}
-										</TableCell>
-										<TableCell>
-											{editingRowIndex === idx ? (
-												<div className="flex space-x-2">
-													<Button
-														size="sm"
-														variant="ghost"
-														onClick={saveEdit}
-														className="text-green-400 hover:text-green-300 hover:bg-green-600/20"
-													>
-														Save
-													</Button>
-													<Button
-														size="sm"
-														variant="ghost"
-														onClick={cancelEdit}
-														className="text-gray-400 hover:text-gray-300 hover:bg-gray-600/20"
-													>
-														Cancel
-													</Button>
-												</div>
-											) : (
-												<div className="flex space-x-2">
-													<Button
-														size="sm"
-														variant="ghost"
-														onClick={() =>
-															openEdit(idx)
-														}
-														className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/20"
-													>
-														<Edit className="h-4 w-4" />
-													</Button>
-													<Button
-														size="sm"
-														variant="ghost"
-														onClick={() =>
-															removeLine(idx)
-														}
-														className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
-													>
-														<Trash2 className="h-4 w-4" />
-													</Button>
-												</div>
-											)}
-										</TableCell>
+										{headerGroup.headers.map((header) => (
+											<TableHead
+												key={header.id}
+												className="text-gray-300"
+											>
+												{header.isPlaceholder
+													? null
+													: flexRender(
+															header.column
+																.columnDef
+																.header,
+															header.getContext()
+													  )}
+											</TableHead>
+										))}
 									</TableRow>
 								))}
-							</TableBody>
-							<TableHeader>
-								<TableRow className="bg-gray-800/50 border-purple-900 hover:bg-gray-800/50">
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300">
-										{totals.totalQuantity.toFixed(2)}
-									</TableHead>
-									<TableHead className="text-gray-300">
-										{totals.totalWeight.toFixed(2)}
-									</TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-								</TableRow>
 							</TableHeader>
+							<TableBody>
+								{table.getRowModel().rows.length ? (
+									table.getRowModel().rows.map((row) => (
+										<TableRow
+											key={row.id}
+											ref={
+												row.index === editingRowIndex
+													? editingRowRef
+													: undefined
+											}
+											className={`border-purple-900 hover:bg-gray-800/30 ${
+												editingRowIndex !== row.index
+													? 'cursor-pointer'
+													: ''
+											}`}
+											onClick={() =>
+												handleRowClick(row.index)
+											}
+										>
+											{row
+												.getVisibleCells()
+												.map((cell) => (
+													<TableCell
+														key={cell.id}
+														className="text-gray-300"
+													>
+														{flexRender(
+															cell.column
+																.columnDef.cell,
+															cell.getContext()
+														)}
+													</TableCell>
+												))}
+										</TableRow>
+									))
+								) : (
+									<TableRow>
+										<TableCell
+											colSpan={columns.length}
+											className="text-center text-gray-400"
+										>
+											No lines added yet.
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
+							<TableFooter>
+								<TableRow className="bg-gray-800/50 border-purple-900">
+									<TableCell colSpan={8} />
+									<TableCell className="text-gray-300 font-semibold">
+										{totals.totalQuantity.toFixed(2)}
+									</TableCell>
+									<TableCell className="text-gray-300 font-semibold">
+										{totals.totalWeight.toFixed(2)}
+									</TableCell>
+									<TableCell colSpan={6} />
+								</TableRow>
+							</TableFooter>
 						</Table>
 					</div>
 				</CardContent>
