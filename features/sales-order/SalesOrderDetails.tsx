@@ -282,16 +282,19 @@ type SalesOrderDetailsProps = {
 	lookups?: SaleOrderLookups;
 	onDirtyChange?: (dirty: boolean) => void;
 	resetToken?: number;
+	startEmpty?: boolean;
 };
 
 export default function SalesOrderDetails({
 	lookups,
 	onDirtyChange,
 	resetToken = 0,
+	startEmpty = false,
 }: SalesOrderDetailsProps) {
-	const [lines, setLines] = useState<SalesOrderLine[]>(seededLines);
+	const initialLines = startEmpty ? [] : seededLines;
+	const [lines, setLines] = useState<SalesOrderLine[]>(initialLines);
 	const [baselineLines, setBaselineLines] =
-		useState<SalesOrderLine[]>(seededLines);
+		useState<SalesOrderLine[]>(initialLines);
 	const latestLinesRef = useRef(lines);
 
 	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);

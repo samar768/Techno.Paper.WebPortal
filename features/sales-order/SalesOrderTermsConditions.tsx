@@ -107,6 +107,8 @@ export default function SalesOrderTermsConditions({
 									<TableCell className="text-gray-300">
 										<Input
 											value={row.value}
+											readOnly
+											disabled
 											onChange={(event) =>
 												handleValueChange(
 													idx,

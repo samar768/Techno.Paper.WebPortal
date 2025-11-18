@@ -12,6 +12,11 @@ import type { SaleOrderLookups } from '@/lib/lookup-types';
 
 type SectionKey = 'header' | 'details' | 'expenses' | 'terms';
 
+type SalesOrderEditorProps = {
+	lookups: SaleOrderLookups;
+	startEmptyLines?: boolean;
+};
+
 const createCleanDirtyState = (): Record<SectionKey, boolean> => ({
 	header: false,
 	details: false,
@@ -21,9 +26,8 @@ const createCleanDirtyState = (): Record<SectionKey, boolean> => ({
 
 export default function SalesOrderEditor({
 	lookups,
-}: {
-	lookups: SaleOrderLookups;
-}) {
+	startEmptyLines = false,
+}: SalesOrderEditorProps) {
 	const [dirtySections, setDirtySections] = useState<
 		Record<SectionKey, boolean>
 	>(() => createCleanDirtyState());
@@ -107,6 +111,7 @@ export default function SalesOrderEditor({
 				lookups={lookups}
 				onDirtyChange={(dirty) => handleDirtyChange('details', dirty)}
 				resetToken={resetToken}
+				startEmpty={startEmptyLines}
 			/>
 
 			<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

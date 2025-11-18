@@ -45,10 +45,21 @@ type SalesOrderHeaderForm = {
 	closed: boolean;
 };
 
+const createTodayDateTimeLocal = () => {
+	const now = new Date();
+	const pad = (value: number) => value.toString().padStart(2, '0');
+	const year = now.getFullYear();
+	const month = pad(now.getMonth() + 1);
+	const day = pad(now.getDate());
+	const hours = pad(now.getHours());
+	const minutes = pad(now.getMinutes());
+	return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const initialForm: SalesOrderHeaderForm = {
 	voucherType: '',
 	orderNo: '',
-	date: '',
+	date: createTodayDateTimeLocal(),
 	partyOrderNo: '',
 	partyDate: '',
 	exciseable: 'Y',
@@ -535,12 +546,7 @@ export default function SalesOrderHeader({
 								</Label>
 								<Input
 									value={form.preparedBy}
-									onChange={(e) =>
-										handleChange(
-											'preparedBy',
-											e.target.value
-										)
-									}
+									disabled
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -552,12 +558,7 @@ export default function SalesOrderHeader({
 								</Label>
 								<Input
 									value={form.modifiedBy}
-									onChange={(e) =>
-										handleChange(
-											'modifiedBy',
-											e.target.value
-										)
-									}
+									disabled
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -569,12 +570,7 @@ export default function SalesOrderHeader({
 								</Label>
 								<Input
 									value={form.approvedBy}
-									onChange={(e) =>
-										handleChange(
-											'approvedBy',
-											e.target.value
-										)
-									}
+									disabled
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -586,9 +582,7 @@ export default function SalesOrderHeader({
 								</Label>
 								<Input
 									value={form.bookedBy}
-									onChange={(e) =>
-										handleChange('bookedBy', e.target.value)
-									}
+									disabled
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>

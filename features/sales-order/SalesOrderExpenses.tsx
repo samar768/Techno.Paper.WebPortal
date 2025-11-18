@@ -117,6 +117,8 @@ export default function SalesOrderExpenses({
 											type="number"
 											step="0.001"
 											value={row.per}
+											readOnly
+											disabled
 											onChange={(event) =>
 												handleRowChange(
 													idx,
@@ -134,6 +136,8 @@ export default function SalesOrderExpenses({
 											type="number"
 											step="0.01"
 											value={row.amount}
+											readOnly
+											disabled
 											onChange={(event) =>
 												handleRowChange(
 													idx,
