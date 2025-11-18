@@ -16,6 +16,7 @@ import {
 	type RowData,
 } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Table,
@@ -31,10 +32,18 @@ import { Plus, Trash2 } from 'lucide-react';
 import { LookupSelect } from '@/components/ui/lookup-select';
 import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
 import type { SaleOrderLookups } from '@/lib/lookup-types';
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 type YesNo = 'Y' | 'N';
 
 type SalesOrderLine = {
+	id: string;
 	itemCode: string;
 	itemName: string;
 	description: string;
@@ -69,7 +78,7 @@ const editableInputClassName =
 	'w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0';
 
 type BaseCellProps<TKey extends keyof SalesOrderLine> = {
-	ctx: CellContext<SalesOrderLine, SalesOrderLine[TKey]>;
+	ctx: CellContext<SalesOrderLine, unknown>;
 	columnKey: TKey;
 	editingRowIndex: number | null;
 };
@@ -152,7 +161,7 @@ function LookupCell<TKey extends keyof SalesOrderLine>({
 	codeAccessor,
 	mapSelection,
 }: {
-	ctx: CellContext<SalesOrderLine, SalesOrderLine[TKey]>;
+	ctx: CellContext<SalesOrderLine, unknown>;
 	columnKey: TKey;
 	lookupCode: string;
 	items?: NormalizedLookup[];
@@ -205,7 +214,17 @@ function LookupCell<TKey extends keyof SalesOrderLine>({
 	);
 }
 
-const defaultLine: SalesOrderLine = {
+const createLineId = () => {
+	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+		return crypto.randomUUID();
+	}
+	return Math.random().toString(36).slice(2, 10);
+};
+
+const createLine = (
+	overrides: Partial<Omit<SalesOrderLine, 'id'>> = {}
+): SalesOrderLine => ({
+	id: createLineId(),
 	itemCode: '',
 	itemName: '',
 	description: '',
@@ -224,11 +243,11 @@ const defaultLine: SalesOrderLine = {
 	rate: 0,
 	overhead: 0,
 	adjustment: 0,
-};
+	...overrides,
+});
 
 const seededLines: SalesOrderLine[] = [
-	{
-		...defaultLine,
+	createLine({
 		itemCode: 'KP-001',
 		itemName: 'Kraft Paper',
 		bf: '14',
@@ -240,9 +259,8 @@ const seededLines: SalesOrderLine[] = [
 		reelPerPack: 6,
 		weightSku: 3450,
 		rate: 25,
-	},
-	{
-		...defaultLine,
+	}),
+	createLine({
 		itemCode: 'KP-002',
 		itemName: 'Kraft Paper B',
 		bf: '16',
@@ -254,7 +272,7 @@ const seededLines: SalesOrderLine[] = [
 		reelPerPack: 3,
 		weightSku: 1700,
 		rate: 25,
-	},
+	}),
 ];
 
 const createLookupValue = (
@@ -285,6 +303,93 @@ type SalesOrderDetailsProps = {
 	startEmpty?: boolean;
 };
 
+const DeleteModal = ({
+	isOpen,
+	onClose,
+	onConfirm,
+	itemsToDelete,
+	itemSummaries,
+}: {
+	isOpen: boolean;
+	onClose: () => void;
+	onConfirm: () => void;
+	itemsToDelete: string[];
+	itemSummaries: string[];
+}) => {
+	const count = itemSummaries.length || itemsToDelete.length;
+	const isMultiple = count > 1;
+	const heading = isMultiple ? 'Delete Line Items' : 'Delete Line Item';
+	const singleLabel = itemSummaries[0] ?? 'this line item';
+
+	return (
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) {
+					onClose();
+				}
+			}}
+		>
+			<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-md backdrop-blur-sm">
+				<DialogHeader>
+					<DialogTitle className="text-white">{heading}</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-4">
+					{isMultiple ? (
+						<>
+							<p className="text-gray-300">
+								Are you sure you want to delete{' '}
+								<span className="font-semibold text-white">
+									{count}
+								</span>{' '}
+								line items? This action cannot be undone.
+							</p>
+							{itemSummaries.length > 0 && (
+								<div className="rounded-md border border-purple-700/60 bg-purple-900/30 p-3">
+									<ul className="space-y-1 text-sm text-gray-200">
+										{itemSummaries.map((summary, index) => (
+											<li
+												key={`${summary}-${index}`}
+												className="truncate"
+											>
+												{summary}
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+						</>
+					) : (
+						<p className="text-gray-300">
+							Are you sure you want to delete{' '}
+							<span className="font-semibold text-white">
+								{singleLabel}
+							</span>
+							? This action cannot be undone.
+						</p>
+					)}
+					<div className="flex justify-end space-x-2 pt-4">
+						<Button
+							variant="outline"
+							onClick={onClose}
+							className="border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400 bg-gray-800"
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={onConfirm}
+							disabled={itemsToDelete.length === 0}
+							className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 disabled:text-red-200/60"
+						>
+							Delete
+						</Button>
+					</div>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+};
+
 export default function SalesOrderDetails({
 	lookups,
 	onDirtyChange,
@@ -296,6 +401,14 @@ export default function SalesOrderDetails({
 	const [baselineLines, setBaselineLines] =
 		useState<SalesOrderLine[]>(initialLines);
 	const latestLinesRef = useRef(lines);
+	const [selectedRows, setSelectedRows] = useState<string[]>([]);
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [pendingDeletion, setPendingDeletion] = useState<string[]>([]);
+	const [pendingSummaries, setPendingSummaries] = useState<string[]>([]);
+	const selectAllRef = useRef<HTMLInputElement | null>(null);
+	const selectionCount = selectedRows.length;
+	const hasSelection = selectionCount > 0;
+	const selectableIds = useMemo(() => lines.map((line) => line.id), [lines]);
 
 	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
 	const editingRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -319,6 +432,10 @@ export default function SalesOrderDetails({
 		onDirtyChange?.(isDirty);
 	}, [isDirty, onDirtyChange]);
 
+	useEffect(() => {
+		setSelectedRows([]);
+	}, [resetToken]);
+
 	const totals = useMemo(() => {
 		const totalQuantity = lines.reduce(
 			(acc, l) => acc + (Number(l.reelPerPack) || 0),
@@ -339,14 +456,11 @@ export default function SalesOrderDetails({
 
 	const addRow = useCallback(() => {
 		setLines((prev) => {
-			const next = [...prev, { ...defaultLine }];
+			const nextLine = createLine();
+			const next = [...prev, nextLine];
 			setEditingRowIndex(next.length - 1);
 			return next;
 		});
-	}, []);
-
-	const removeLine = useCallback((idx: number) => {
-		setLines((prev) => prev.filter((_, i) => i !== idx));
 	}, []);
 
 	useEffect(() => {
@@ -374,6 +488,96 @@ export default function SalesOrderDetails({
 		);
 	}, []);
 
+	const handleToggleRow = useCallback((rowId: string) => {
+		setSelectedRows((prev) =>
+			prev.includes(rowId)
+				? prev.filter((id) => id !== rowId)
+				: [...prev, rowId]
+		);
+	}, []);
+
+	const areAllSelected =
+		selectableIds.length > 0 &&
+		selectedRows.length === selectableIds.length;
+
+	useEffect(() => {
+		if (selectAllRef.current) {
+			selectAllRef.current.indeterminate =
+				selectedRows.length > 0 && !areAllSelected;
+		}
+	}, [selectedRows.length, areAllSelected]);
+
+	useEffect(() => {
+		setSelectedRows((prev) =>
+			prev.filter((id) => selectableIds.includes(id))
+		);
+	}, [selectableIds]);
+
+	const handleToggleSelectAll = useCallback(() => {
+		setSelectedRows((prev) =>
+			prev.length === selectableIds.length ? [] : selectableIds
+		);
+	}, [selectableIds]);
+
+	const handleOpenDelete = useCallback(
+		(targetRows: string[]) => {
+			if (!targetRows.length) {
+				return;
+			}
+			setPendingDeletion(targetRows);
+			setPendingSummaries(
+				targetRows
+					.map((id) => lines.find((line) => line.id === id))
+					.filter((line): line is SalesOrderLine => Boolean(line))
+					.map((line) =>
+						[line.itemName || 'Untitled Item', line.itemCode]
+							.filter(Boolean)
+							.join(' • ')
+					)
+			);
+			setIsDeleteModalOpen(true);
+		},
+		[lines]
+	);
+
+	const handleBulkDelete = useCallback(() => {
+		if (!selectedRows.length) {
+			return;
+		}
+		handleOpenDelete(selectedRows);
+	}, [handleOpenDelete, selectedRows]);
+
+	const handleConfirmDelete = useCallback(() => {
+		if (!pendingDeletion.length) {
+			return;
+		}
+
+		setLines((prev) =>
+			prev.filter((line) => !pendingDeletion.includes(line.id))
+		);
+		setSelectedRows((prev) =>
+			prev.filter((id) => !pendingDeletion.includes(id))
+		);
+		setIsDeleteModalOpen(false);
+		setPendingDeletion([]);
+		setPendingSummaries([]);
+
+		if (pendingDeletion.length === 1) {
+			toast.success('Line item deleted successfully.');
+			return;
+		}
+
+		toast.success(
+			`${pendingDeletion.length} line items deleted successfully.`
+		);
+	}, [pendingDeletion]);
+
+	const handleCloseDeleteModal = useCallback(() => {
+		setIsDeleteModalOpen(false);
+		setPendingDeletion([]);
+		setPendingSummaries([]);
+	}, []);
+
 	const updateData = useCallback(
 		(
 			rowIndex: number,
@@ -393,6 +597,36 @@ export default function SalesOrderDetails({
 
 	const columns = useMemo<ColumnDef<SalesOrderLine>[]>(
 		() => [
+			{
+				id: 'select',
+				header: () => (
+					<input
+						ref={selectAllRef}
+						type="checkbox"
+						onChange={handleToggleSelectAll}
+						checked={areAllSelected}
+						className="h-4 w-4 cursor-pointer accent-purple-500"
+						aria-label="Select all line items"
+					/>
+				),
+				cell: ({ row }) => (
+					<input
+						type="checkbox"
+						checked={selectedRows.includes(row.original.id)}
+						onMouseDown={(event) => event.stopPropagation()}
+						onClick={(event) => event.stopPropagation()}
+						onChange={(event) => {
+							event.stopPropagation();
+							handleToggleRow(row.original.id);
+						}}
+						className="h-4 w-4 cursor-pointer accent-purple-500"
+						aria-label={`Select line item ${row.index + 1}`}
+					/>
+				),
+				size: 40,
+				enableSorting: false,
+				enableColumnFilter: false,
+			},
 			{
 				id: 'serial',
 				header: () => <span className="text-gray-300">S. No.</span>,
@@ -579,27 +813,16 @@ export default function SalesOrderDetails({
 					/>
 				),
 			},
-			{
-				id: 'actions',
-				header: () => <span className="text-gray-300">Actions</span>,
-				cell: ({ row }) => (
-					<div className="flex space-x-2">
-						<Button
-							size="sm"
-							variant="ghost"
-							onClick={(e) => {
-								e.stopPropagation();
-								removeLine(row.index);
-							}}
-							className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
-						>
-							<Trash2 className="h-4 w-4" />
-						</Button>
-					</div>
-				),
-			},
 		],
-		[editingRowIndex, lookups, amountFor, removeLine]
+		[
+			editingRowIndex,
+			lookups,
+			amountFor,
+			handleToggleRow,
+			handleToggleSelectAll,
+			areAllSelected,
+			selectedRows,
+		]
 	);
 
 	const table = useReactTable({
@@ -615,16 +838,26 @@ export default function SalesOrderDetails({
 		<div className="space-y-4">
 			<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
 				<CardHeader>
-					<div className="flex items-center justify-between">
+					<div className="flex items-center justify-between gap-4">
 						<CardTitle className="text-white text-xl">
 							Sales Order Details
 						</CardTitle>
-						<Button
-							onClick={addRow}
-							className="bg-purple-600 hover:bg-purple-700 text-white"
-						>
-							<Plus className="h-4 w-4 mr-1" /> Add Row
-						</Button>
+						<div className="flex items-center gap-2">
+							<Button
+								onClick={addRow}
+								className="bg-purple-600 hover:bg-purple-700 text-white"
+							>
+								<Plus className="h-4 w-4 mr-1" /> Add Row
+							</Button>
+							{hasSelection && (
+								<Button
+									onClick={handleBulkDelete}
+									className="bg-red-600 hover:bg-red-700 text-white"
+								>
+									<Trash2 className="h-4 w-4 mr-1" /> Delete
+								</Button>
+							)}
+						</div>
 					</div>
 				</CardHeader>
 				<CardContent className="space-y-4">
@@ -702,20 +935,27 @@ export default function SalesOrderDetails({
 							</TableBody>
 							<TableFooter>
 								<TableRow className="bg-gray-800/50 border-purple-900">
-									<TableCell colSpan={8} />
+									<TableCell colSpan={9} />
 									<TableCell className="text-gray-300 font-semibold">
 										{totals.totalQuantity.toFixed(2)}
 									</TableCell>
 									<TableCell className="text-gray-300 font-semibold">
 										{totals.totalWeight.toFixed(2)}
 									</TableCell>
-									<TableCell colSpan={6} />
+									<TableCell colSpan={5} />
 								</TableRow>
 							</TableFooter>
 						</Table>
 					</div>
 				</CardContent>
 			</Card>
+			<DeleteModal
+				isOpen={isDeleteModalOpen}
+				onClose={handleCloseDeleteModal}
+				onConfirm={handleConfirmDelete}
+				itemsToDelete={pendingDeletion}
+				itemSummaries={pendingSummaries}
+			/>
 		</div>
 	);
 }
