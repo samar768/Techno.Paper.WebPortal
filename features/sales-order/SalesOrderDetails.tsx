@@ -278,15 +278,43 @@ const resolveLookupValue = (
 	items?.find((item) => item.Code === code) ??
 	createLookupValue(code, description);
 
+type SalesOrderDetailsProps = {
+	lookups?: SaleOrderLookups;
+	onDirtyChange?: (dirty: boolean) => void;
+	resetToken?: number;
+};
+
 export default function SalesOrderDetails({
 	lookups,
-}: {
-	lookups?: SaleOrderLookups;
-}) {
+	onDirtyChange,
+	resetToken = 0,
+}: SalesOrderDetailsProps) {
 	const [lines, setLines] = useState<SalesOrderLine[]>(seededLines);
+	const [baselineLines, setBaselineLines] =
+		useState<SalesOrderLine[]>(seededLines);
+	const latestLinesRef = useRef(lines);
 
 	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
 	const editingRowRef = useRef<HTMLTableRowElement | null>(null);
+
+	const linesSignature = useMemo(() => JSON.stringify(lines), [lines]);
+	const baselineSignature = useMemo(
+		() => JSON.stringify(baselineLines),
+		[baselineLines]
+	);
+	const isDirty = linesSignature !== baselineSignature;
+
+	useEffect(() => {
+		latestLinesRef.current = lines;
+	}, [lines]);
+
+	useEffect(() => {
+		setBaselineLines(latestLinesRef.current);
+	}, [resetToken]);
+
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
 
 	const totals = useMemo(() => {
 		const totalQuantity = lines.reduce(

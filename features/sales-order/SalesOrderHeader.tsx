@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -69,12 +69,23 @@ const initialForm: SalesOrderHeaderForm = {
 	closed: false,
 };
 
+type SalesOrderHeaderProps = {
+	lookups?: SaleOrderLookups;
+	onDirtyChange?: (dirty: boolean) => void;
+	onRegisterSaveHandler?: (handler: () => boolean) => void;
+	resetToken?: number;
+};
+
 export default function SalesOrderHeader({
 	lookups,
-}: {
-	lookups?: SaleOrderLookups;
-}) {
+	onDirtyChange,
+	onRegisterSaveHandler,
+	resetToken = 0,
+}: SalesOrderHeaderProps) {
 	const [form, setForm] = useState<SalesOrderHeaderForm>(initialForm);
+	const [baselineForm, setBaselineForm] =
+		useState<SalesOrderHeaderForm>(initialForm);
+	const latestFormRef = useRef(form);
 	const [selectedVoucherType, setSelectedVoucherType] =
 		useState<NormalizedLookup | null>(null);
 	const [selectedSaleVoucher, setSelectedSaleVoucher] =
@@ -173,10 +184,35 @@ export default function SalesOrderHeader({
 	const handleSubmit = useCallback(() => {
 		if (requiredErrors.length > 0) {
 			toast.error(requiredErrors.join('\n'));
-			return;
+			return false;
 		}
 		toast.success('Sales Order Header saved');
+		return true;
 	}, [requiredErrors]);
+
+	const formSignature = useMemo(() => JSON.stringify(form), [form]);
+	const baselineSignature = useMemo(
+		() => JSON.stringify(baselineForm),
+		[baselineForm]
+	);
+	const isDirty = formSignature !== baselineSignature;
+
+	useEffect(() => {
+		latestFormRef.current = form;
+	}, [form]);
+
+	useEffect(() => {
+		setBaselineForm(latestFormRef.current);
+	}, [resetToken]);
+
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
+
+	useEffect(() => {
+		if (!onRegisterSaveHandler) return;
+		onRegisterSaveHandler(() => handleSubmit());
+	}, [handleSubmit, onRegisterSaveHandler]);
 
 	return (
 		<div className="space-y-4">
@@ -189,14 +225,6 @@ export default function SalesOrderHeader({
 						Back
 					</Button>
 				</Link>
-				<div className="flex gap-2">
-					<Button
-						className="bg-purple-600 hover:bg-purple-700 text-white"
-						onClick={handleSubmit}
-					>
-						Save
-					</Button>
-				</div>
 			</div>
 
 			{/* Two responsive cards: left = Sale Order Information, right = Party Information */}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Table,
@@ -9,15 +10,67 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 
-const termsData = [
+type TermRow = {
+	fieldName: string;
+	value: string;
+};
+
+const initialTerms: TermRow[] = [
 	{ fieldName: 'Duty & taxes', value: 'ED+VAT+INS' },
 	{ fieldName: 'Freight', value: 'To Pay' },
 	{ fieldName: 'Remark', value: '' },
 	{ fieldName: 'Delivery', value: '' },
 ];
 
-export default function SalesOrderTermsConditions() {
+type SalesOrderTermsConditionsProps = {
+	onDirtyChange?: (dirty: boolean) => void;
+	resetToken?: number;
+};
+
+export default function SalesOrderTermsConditions({
+	onDirtyChange,
+	resetToken = 0,
+}: SalesOrderTermsConditionsProps) {
+	const [rows, setRows] = useState<TermRow[]>(() => [...initialTerms]);
+	const [baselineRows, setBaselineRows] = useState<TermRow[]>(() => [
+		...initialTerms,
+	]);
+	const latestRowsRef = useRef(rows);
+
+	const handleValueChange = useCallback((index: number, value: string) => {
+		setRows((prev) =>
+			prev.map((row, idx) =>
+				idx === index
+					? {
+							...row,
+							value,
+					  }
+					: row
+			)
+		);
+	}, []);
+
+	useEffect(() => {
+		latestRowsRef.current = rows;
+	}, [rows]);
+
+	useEffect(() => {
+		setBaselineRows(latestRowsRef.current);
+	}, [resetToken]);
+
+	const rowsSignature = useMemo(() => JSON.stringify(rows), [rows]);
+	const baselineSignature = useMemo(
+		() => JSON.stringify(baselineRows),
+		[baselineRows]
+	);
+	const isDirty = rowsSignature !== baselineSignature;
+
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
+
 	return (
 		<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
 			<CardHeader>
@@ -39,7 +92,7 @@ export default function SalesOrderTermsConditions() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{termsData.map((row, idx) => (
+							{rows.map((row, idx) => (
 								<TableRow
 									key={idx}
 									className={`border-purple-900 hover:bg-gray-800/30 ${
@@ -52,7 +105,16 @@ export default function SalesOrderTermsConditions() {
 										{row.fieldName}
 									</TableCell>
 									<TableCell className="text-gray-300">
-										{row.value}
+										<Input
+											value={row.value}
+											onChange={(event) =>
+												handleValueChange(
+													idx,
+													event.target.value
+												)
+											}
+											className="w-full bg-purple-950/40 border border-purple-800/60 text-white placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:border-purple-500"
+										/>
 									</TableCell>
 								</TableRow>
 							))}

@@ -1,15 +1,9 @@
 import Link from 'next/link';
-import { Suspense } from 'react';
 import { saleOrdersById } from '../data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import SalesOrderHeader from '@/features/sales-order/SalesOrderHeader';
-import SalesOrderDetails from '@/features/sales-order/SalesOrderDetails';
-import SalesOrderTermsConditions from '@/features/sales-order/SalesOrderTermsConditions';
-import SalesOrderExpenses from '@/features/sales-order/SalesOrderExpenses';
-import SalesOrderFooterOption1 from '@/features/sales-order/SalesOrderFooter';
 import { getSaleOrderLookups } from '@/lib/lookups';
-import type { SaleOrderLookups } from '@/lib/lookup-types';
+import SalesOrderEditor from '@/features/sales-order/SalesOrderEditor';
 
 function SectionSkeleton({ title }: { title: string }) {
 	return (
@@ -22,24 +16,6 @@ function SectionSkeleton({ title }: { title: string }) {
 			</CardContent>
 		</Card>
 	);
-}
-
-async function HeaderSection({
-	lookupsPromise,
-}: {
-	lookupsPromise: Promise<SaleOrderLookups>;
-}) {
-	const lookups = await lookupsPromise;
-	return <SalesOrderHeader lookups={lookups} />;
-}
-
-async function DetailsSection({
-	lookupsPromise,
-}: {
-	lookupsPromise: Promise<SaleOrderLookups>;
-}) {
-	const lookups = await lookupsPromise;
-	return <SalesOrderDetails lookups={lookups} />;
 }
 
 export default async function SaleOrderDetailPage({
@@ -78,31 +54,11 @@ export default async function SaleOrderDetailPage({
 		);
 	}
 
-	const lookupsPromise = getSaleOrderLookups();
+	const lookups = await getSaleOrderLookups();
 
 	return (
-		<>
-			<div className="pb-16">
-				<Suspense
-					fallback={
-						<SectionSkeleton title="Sale Order Information" />
-					}
-				>
-					<HeaderSection lookupsPromise={lookupsPromise} />
-				</Suspense>
-				<br />
-				<Suspense
-					fallback={<SectionSkeleton title="Sales Order Details" />}
-				>
-					<DetailsSection lookupsPromise={lookupsPromise} />
-				</Suspense>
-				<br />
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-					<SalesOrderTermsConditions />
-					<SalesOrderExpenses />
-				</div>
-				<SalesOrderFooterOption1 />
-			</div>
-		</>
+		<div className="pb-16">
+			<SalesOrderEditor lookups={lookups} />
+		</div>
 	);
 }
