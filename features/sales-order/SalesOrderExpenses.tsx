@@ -33,6 +33,7 @@ type SalesOrderExpensesProps = {
 export default function SalesOrderExpenses({
 	onDirtyChange,
 	resetToken = 0,
+	readOnly: _readOnly,
 }: SalesOrderExpensesProps) {
 	const [rows, setRows] = useState<ExpenseRow[]>(() => [...initialExpenses]);
 	const [baselineRows, setBaselineRows] = useState<ExpenseRow[]>(() => [

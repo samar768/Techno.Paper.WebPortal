@@ -20,7 +20,11 @@ import {
 	CheckCircle2Icon,
 } from 'lucide-react';
 
-export default function SalesOrderFooter() {
+export default function SalesOrderFooter({
+	readOnly = false,
+}: {
+	readOnly?: boolean;
+}) {
 	return (
 		<TooltipProvider>
 			<div className="fixed inset-x-0 bottom-4 z-40 flex justify-center pointer-events-none">
@@ -119,6 +123,7 @@ export default function SalesOrderFooter() {
 								size="sm"
 								className="h-8 px-4 text-xs"
 								type="button"
+								disabled={readOnly}
 							>
 								<SaveIcon className="mr-2 h-3 w-3" />
 								Save
@@ -128,6 +133,7 @@ export default function SalesOrderFooter() {
 								size="sm"
 								className="h-8 px-4 text-xs"
 								type="button"
+								disabled={readOnly}
 							>
 								<FileOutputIcon className="mr-2 h-3 w-3" />
 								Draft
@@ -137,6 +143,7 @@ export default function SalesOrderFooter() {
 								size="sm"
 								className="h-8 px-4 text-xs"
 								type="button"
+								disabled={readOnly}
 							>
 								<FileTextLucideIcon className="mr-2 h-3 w-3" />
 								Print PDF
@@ -146,6 +153,7 @@ export default function SalesOrderFooter() {
 								size="sm"
 								className="h-8 px-5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
 								type="button"
+								disabled={readOnly}
 							>
 								<CheckCircle2Icon className="mr-2 h-3 w-3" />
 								Save & Approve

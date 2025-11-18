@@ -20,10 +20,13 @@ function SectionSkeleton({ title }: { title: string }) {
 
 export default async function SaleOrderDetailPage({
 	params,
+	searchParams,
 }: {
 	params: Promise<{ id: string }>;
+	searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
 	const { id: rawId } = await params;
+	const resolvedSearchParams = searchParams ? await searchParams : undefined;
 	const id = decodeURIComponent(rawId ?? '');
 	const order = saleOrdersById[id];
 
@@ -54,11 +57,20 @@ export default async function SaleOrderDetailPage({
 		);
 	}
 
+	const modeParam = resolvedSearchParams?.mode;
+	const mode =
+		typeof modeParam === 'string'
+			? modeParam
+			: Array.isArray(modeParam)
+			? modeParam[0] ?? ''
+			: '';
+	const readOnly = mode === 'view';
+
 	const lookups = await getSaleOrderLookups();
 
 	return (
 		<div className="pb-16">
-			<SalesOrderEditor lookups={lookups} />
+			<SalesOrderEditor lookups={lookups} readOnly={readOnly} />
 		</div>
 	);
 }

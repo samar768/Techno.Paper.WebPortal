@@ -28,7 +28,7 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Edit, Search, Plus, Trash2 } from 'lucide-react';
+import { Edit, Search, Plus, Trash2, Eye } from 'lucide-react';
 
 interface InventoryItem {
 	sku: string;
@@ -240,6 +240,17 @@ export default function InventoryPage() {
 		(item: InventoryItem) => {
 			router.push(
 				`/dashboard/sale-order/${encodeURIComponent(item.sku)}`
+			);
+		},
+		[router]
+	);
+
+	const handleView = useCallback(
+		(item: InventoryItem) => {
+			router.push(
+				`/dashboard/sale-order/${encodeURIComponent(
+					item.sku
+				)}?mode=view`
 			);
 		},
 		[router]
@@ -559,6 +570,16 @@ export default function InventoryPage() {
 													className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/20"
 												>
 													<Edit className="h-4 w-4" />
+												</Button>
+												<Button
+													size="sm"
+													variant="ghost"
+													onClick={() =>
+														handleView(item)
+													}
+													className="text-blue-400 hover:text-blue-300 hover:bg-blue-600/20"
+												>
+													<Eye className="h-4 w-4" />
 												</Button>
 											</div>
 										</TableCell>

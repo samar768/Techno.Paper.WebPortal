@@ -21,6 +21,7 @@ interface LookupSelectProps {
 	value?: NormalizedLookup | null;
 	onChange?: (value: NormalizedLookup | null) => void;
 	items?: NormalizedLookup[];
+	readOnly?: boolean;
 }
 
 /**
@@ -138,10 +139,12 @@ function LookupCombobox({
 	items,
 	selected,
 	onSelect,
+	readOnly,
 }: {
 	items: NormalizedLookup[];
 	selected: NormalizedLookup | null;
 	onSelect: (item: NormalizedLookup) => void;
+	readOnly?: boolean;
 }) {
 	const ROW_HEIGHT = 36;
 	const DEFAULT_VISIBLE_COUNT = 8;
@@ -343,6 +346,7 @@ function LookupCombobox({
 					aria-expanded={open}
 					className="w-full justify-between"
 					type="button"
+					disabled={readOnly}
 				>
 					{selected
 						? selected.Description || selected.Code
@@ -483,6 +487,7 @@ export function LookupSelect({
 	value,
 	onChange,
 	items: injectedItems,
+	readOnly,
 }: LookupSelectProps) {
 	const [items, setItems] = useState<NormalizedLookup[]>(injectedItems ?? []);
 	const [loading, setLoading] = useState(injectedItems === undefined);
@@ -566,6 +571,7 @@ export function LookupSelect({
 			items={items}
 			selected={value || null}
 			onSelect={(item) => onChange?.(item)}
+			readOnly={readOnly}
 		/>
 	);
 }

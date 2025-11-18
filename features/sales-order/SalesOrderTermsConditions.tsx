@@ -27,11 +27,13 @@ const initialTerms: TermRow[] = [
 type SalesOrderTermsConditionsProps = {
 	onDirtyChange?: (dirty: boolean) => void;
 	resetToken?: number;
+	readOnly?: boolean;
 };
 
 export default function SalesOrderTermsConditions({
 	onDirtyChange,
 	resetToken = 0,
+	readOnly: _readOnly,
 }: SalesOrderTermsConditionsProps) {
 	const [rows, setRows] = useState<TermRow[]>(() => [...initialTerms]);
 	const [baselineRows, setBaselineRows] = useState<TermRow[]>(() => [

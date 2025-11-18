@@ -301,6 +301,7 @@ type SalesOrderDetailsProps = {
 	onDirtyChange?: (dirty: boolean) => void;
 	resetToken?: number;
 	startEmpty?: boolean;
+	readOnly?: boolean;
 };
 
 const DeleteModal = ({
@@ -395,6 +396,7 @@ export default function SalesOrderDetails({
 	onDirtyChange,
 	resetToken = 0,
 	startEmpty = false,
+	readOnly = false,
 }: SalesOrderDetailsProps) {
 	const initialLines = startEmpty ? [] : seededLines;
 	const [lines, setLines] = useState<SalesOrderLine[]>(initialLines);
@@ -455,13 +457,16 @@ export default function SalesOrderDetails({
 	}, []);
 
 	const addRow = useCallback(() => {
+		if (readOnly) {
+			return;
+		}
 		setLines((prev) => {
 			const nextLine = createLine();
 			const next = [...prev, nextLine];
 			setEditingRowIndex(next.length - 1);
 			return next;
 		});
-	}, []);
+	}, [readOnly]);
 
 	useEffect(() => {
 		if (editingRowIndex === null) return;
@@ -482,11 +487,17 @@ export default function SalesOrderDetails({
 			document.removeEventListener('mousedown', handleClickOutside);
 	}, [editingRowIndex]);
 
-	const handleRowClick = useCallback((rowIndex: number) => {
-		setEditingRowIndex((current) =>
-			current === rowIndex ? current : rowIndex
-		);
-	}, []);
+	const handleRowClick = useCallback(
+		(rowIndex: number) => {
+			if (readOnly) {
+				return;
+			}
+			setEditingRowIndex((current) =>
+				current === rowIndex ? current : rowIndex
+			);
+		},
+		[readOnly]
+	);
 
 	const handleToggleRow = useCallback((rowId: string) => {
 		setSelectedRows((prev) =>
@@ -584,6 +595,9 @@ export default function SalesOrderDetails({
 			columnId: keyof SalesOrderLine,
 			value: SalesOrderLine[keyof SalesOrderLine]
 		) => {
+			if (readOnly) {
+				return;
+			}
 			setLines((prev) =>
 				prev.map((row, idx) =>
 					idx === rowIndex
@@ -592,7 +606,7 @@ export default function SalesOrderDetails({
 				)
 			);
 		},
-		[]
+		[readOnly]
 	);
 
 	const columns = useMemo<ColumnDef<SalesOrderLine>[]>(
@@ -607,6 +621,7 @@ export default function SalesOrderDetails({
 						checked={areAllSelected}
 						className="h-4 w-4 cursor-pointer accent-purple-500"
 						aria-label="Select all line items"
+						disabled={readOnly}
 					/>
 				),
 				cell: ({ row }) => (
@@ -621,6 +636,7 @@ export default function SalesOrderDetails({
 						}}
 						className="h-4 w-4 cursor-pointer accent-purple-500"
 						aria-label={`Select line item ${row.index + 1}`}
+						disabled={readOnly}
 					/>
 				),
 				size: 40,
@@ -822,6 +838,7 @@ export default function SalesOrderDetails({
 			handleToggleSelectAll,
 			areAllSelected,
 			selectedRows,
+			readOnly,
 		]
 	);
 
@@ -846,6 +863,7 @@ export default function SalesOrderDetails({
 							<Button
 								onClick={addRow}
 								className="bg-purple-600 hover:bg-purple-700 text-white"
+								disabled={readOnly}
 							>
 								<Plus className="h-4 w-4 mr-1" /> Add Row
 							</Button>
@@ -853,6 +871,7 @@ export default function SalesOrderDetails({
 								<Button
 									onClick={handleBulkDelete}
 									className="bg-red-600 hover:bg-red-700 text-white"
+									disabled={readOnly}
 								>
 									<Trash2 className="h-4 w-4 mr-1" /> Delete
 								</Button>

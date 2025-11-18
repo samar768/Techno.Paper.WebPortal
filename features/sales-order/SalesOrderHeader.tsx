@@ -85,6 +85,7 @@ type SalesOrderHeaderProps = {
 	onDirtyChange?: (dirty: boolean) => void;
 	onRegisterSaveHandler?: (handler: () => boolean) => void;
 	resetToken?: number;
+	readOnly?: boolean;
 };
 
 export default function SalesOrderHeader({
@@ -92,6 +93,7 @@ export default function SalesOrderHeader({
 	onDirtyChange,
 	onRegisterSaveHandler,
 	resetToken = 0,
+	readOnly = false,
 }: SalesOrderHeaderProps) {
 	const [form, setForm] = useState<SalesOrderHeaderForm>(initialForm);
 	const [baselineForm, setBaselineForm] =
@@ -259,6 +261,7 @@ export default function SalesOrderHeader({
 									value={selectedVoucherType}
 									onChange={handleVoucherTypeChange}
 									items={lookups?.voucherTypes}
+									readOnly={readOnly}
 								/>
 							</div>
 
@@ -275,6 +278,8 @@ export default function SalesOrderHeader({
 									onChange={(e) =>
 										handleChange('orderNo', e.target.value)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -291,6 +296,8 @@ export default function SalesOrderHeader({
 									onChange={(e) =>
 										handleChange('date', e.target.value)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
 								/>
 							</div>
@@ -306,6 +313,7 @@ export default function SalesOrderHeader({
 									value={selectedSaleVoucher}
 									onChange={handleSaleVoucherChange}
 									items={lookups?.saleVTypes}
+									readOnly={readOnly}
 								/>
 							</div>
 
@@ -325,6 +333,8 @@ export default function SalesOrderHeader({
 											e.target.value
 										)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -343,6 +353,8 @@ export default function SalesOrderHeader({
 											e.target.value
 										)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
 								/>
 							</div>
@@ -357,6 +369,7 @@ export default function SalesOrderHeader({
 									onValueChange={(v) =>
 										handleChange('existingOrder', v)
 									}
+									disabled={readOnly}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
 										<SelectValue placeholder="Select amendment order" />
@@ -394,6 +407,7 @@ export default function SalesOrderHeader({
 									value={selectedParty}
 									onChange={handlePartyChange}
 									items={lookups?.customers}
+									readOnly={readOnly}
 								/>
 							</div>
 
@@ -411,6 +425,8 @@ export default function SalesOrderHeader({
 											e.target.value
 										)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -425,6 +441,7 @@ export default function SalesOrderHeader({
 									value={selectedDeliveryTo}
 									onChange={handleDeliveryToChange}
 									items={lookups?.cities}
+									readOnly={readOnly}
 								/>
 							</div>
 
@@ -443,6 +460,8 @@ export default function SalesOrderHeader({
 											e.target.value
 										)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
 								/>
 							</div>
@@ -458,6 +477,7 @@ export default function SalesOrderHeader({
 									value={selectedConsignee}
 									onChange={handleConsigneeChange}
 									items={lookups?.customers}
+									readOnly={readOnly}
 								/>
 							</div>
 
@@ -471,6 +491,7 @@ export default function SalesOrderHeader({
 									value={selectedToPlace}
 									onChange={handleToPlaceChange}
 									items={lookups?.cities}
+									readOnly={readOnly}
 								/>
 							</div>
 						</div>
@@ -488,6 +509,7 @@ export default function SalesOrderHeader({
 									value={selectedOrderType}
 									onChange={handleOrderTypeChange}
 									items={lookups?.orderTypes}
+									readOnly={readOnly}
 								/>
 							</div>
 
@@ -500,6 +522,8 @@ export default function SalesOrderHeader({
 									onChange={(e) =>
 										handleChange('remark', e.target.value)
 									}
+									readOnly={readOnly}
+									disabled={readOnly}
 									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
 								/>
 							</div>
@@ -512,6 +536,7 @@ export default function SalesOrderHeader({
 									onValueChange={(v) =>
 										handleChange('closed', v === 'Y')
 									}
+									disabled={readOnly}
 								>
 									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
 										<SelectValue placeholder="Select" />
