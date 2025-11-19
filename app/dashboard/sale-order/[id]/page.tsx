@@ -1,33 +1,34 @@
-'use client';
-
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { useParams } from 'next/navigation';
 import { saleOrdersById } from '../data';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '@/components/ui/table';
-import SalesOrderHeader from '@/features/sales-order/SalesOrderHeader';
-import SalesOrderDetails from '@/features/sales-order/SalesOrderDetails';
-import SalesOrderTermsConditions from '@/features/sales-order/SalesOrderTermsConditions';
-import SalesOrderExpenses from '@/features/sales-order/SalesOrderExpenses';
+import { getSaleOrderLookups } from '@/lib/lookups';
+import SalesOrderEditor from '@/features/sales-order/SalesOrderEditor';
 
-export default function SaleOrderDetailPage() {
-	const params = useParams();
-	const rawId = String(params?.id ?? '');
-	const id = decodeURIComponent(rawId);
+function SectionSkeleton({ title }: { title: string }) {
+	return (
+		<Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
+			<CardHeader>
+				<CardTitle className="text-white">{title}</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<div className="h-20 animate-pulse bg-gray-800/50 rounded" />
+			</CardContent>
+		</Card>
+	);
+}
 
-	const order = useMemo(() => saleOrdersById[id], [id]);
+export default async function SaleOrderDetailPage({
+	params,
+	searchParams,
+}: {
+	params: Promise<{ id: string }>;
+	searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+	const { id: rawId } = await params;
+	const resolvedSearchParams = searchParams ? await searchParams : undefined;
+	const id = decodeURIComponent(rawId ?? '');
+	const order = saleOrdersById[id];
 
 	if (!order) {
 		return (
@@ -56,16 +57,20 @@ export default function SaleOrderDetailPage() {
 		);
 	}
 
+	const modeParam = resolvedSearchParams?.mode;
+	const mode =
+		typeof modeParam === 'string'
+			? modeParam
+			: Array.isArray(modeParam)
+			? modeParam[0] ?? ''
+			: '';
+	const readOnly = mode === 'view';
+
+	const lookups = await getSaleOrderLookups();
+
 	return (
-		<>
-			<SalesOrderHeader />
-			<br />
-			<SalesOrderDetails />
-			<br />
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-				<SalesOrderTermsConditions />
-				<SalesOrderExpenses />
-			</div>
-		</>
+		<div className="pb-16">
+			<SalesOrderEditor lookups={lookups} readOnly={readOnly} />
+		</div>
 	);
 }

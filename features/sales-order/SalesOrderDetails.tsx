@@ -1,7 +1,22 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
+import {
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
+	type CellContext,
+	type ColumnDef,
+	type RowData,
+} from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
 	Table,
@@ -9,83 +24,419 @@ import {
 	TableCell,
 	TableHead,
 	TableHeader,
+	TableFooter,
 	TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Plus, Trash2 } from 'lucide-react';
+import { LookupSelect } from '@/components/ui/lookup-select';
+import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
+import type { SaleOrderLookups } from '@/lib/lookup-types';
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 type YesNo = 'Y' | 'N';
 
 type SalesOrderLine = {
+	id: string;
+	itemCode: string;
 	itemName: string;
 	description: string;
-	bf: string; // Burst Factor (dropdown)
-	width: number; // cm
-	length: number; // cm
-	unit: 'CM' | 'IN' | 'MM';
-	grain: string; // dropdown
-	gsm: string; // dropdown
-	reelPerPack: number; // Quantity
-	weightSecUnit: number; // numeric only
-	secUnit: string; // e.g., Kg.
-	weightSku: number; // used for amount calc and total weight
+	bf: string;
+	width: number;
+	length: number;
+	unit: string;
+	grain: string;
+	gsm: string;
+	reelPerPack: number;
+	weightSecUnit: number;
+	secUnit: string;
+	weightSku: number;
 	tolerance: YesNo;
-	sku: string; // display only
-	rate: number; // price per Kg.
-	overhead: number; // OH
-	adjustment: number; // Adj
+	sku: string;
+	rate: number;
+	overhead: number;
+	adjustment: number;
 };
 
-const defaultLine: SalesOrderLine = {
-	itemName: 'Kraft Paper',
+declare module '@tanstack/react-table' {
+	interface TableMeta<TData extends RowData> {
+		updateData: (
+			rowIndex: number,
+			columnId: keyof SalesOrderLine,
+			value: SalesOrderLine[keyof SalesOrderLine]
+		) => void;
+	}
+}
+
+const editableInputClassName =
+	'w-full h-8 bg-transparent border-none text-gray-300 focus:ring-0 focus:ring-offset-0 p-0';
+
+type BaseCellProps<TKey extends keyof SalesOrderLine> = {
+	ctx: CellContext<SalesOrderLine, unknown>;
+	columnKey: TKey;
+	editingRowIndex: number | null;
+};
+
+type NumberCellProps<TKey extends keyof SalesOrderLine> =
+	BaseCellProps<TKey> & {
+		decimal?: boolean;
+	};
+
+function NumberCell<TKey extends keyof SalesOrderLine>({
+	ctx,
+	columnKey,
+	editingRowIndex,
+	decimal,
+}: NumberCellProps<TKey>) {
+	const { row, table } = ctx;
+	const isEditing = editingRowIndex === row.index;
+	const value = row.original[columnKey] as number | string | undefined;
+	if (!isEditing) {
+		const numericValue = Number(value ?? 0);
+		const displayValue = Number.isFinite(numericValue)
+			? numericValue.toFixed(decimal ? 2 : 0)
+			: '-';
+		return <span className="text-gray-300">{displayValue}</span>;
+	}
+
+	return (
+		<Input
+			type="number"
+			step={decimal ? '0.01' : '1'}
+			value={value ?? ''}
+			onChange={(event) => {
+				const parsed = Number.parseFloat(event.target.value);
+				table.options.meta?.updateData(
+					row.index,
+					columnKey,
+					(Number.isNaN(parsed)
+						? 0
+						: parsed) as SalesOrderLine[typeof columnKey]
+				);
+			}}
+			className={editableInputClassName}
+		/>
+	);
+}
+
+function TextCell<TKey extends keyof SalesOrderLine>({
+	ctx,
+	columnKey,
+	editingRowIndex,
+}: BaseCellProps<TKey>) {
+	const { row, table } = ctx;
+	const isEditing = editingRowIndex === row.index;
+	const value = (row.original[columnKey] as string | undefined) ?? '';
+	if (!isEditing) {
+		return <span className="text-gray-300">{value || '-'}</span>;
+	}
+
+	return (
+		<Input
+			value={value}
+			onChange={(event) =>
+				table.options.meta?.updateData(
+					row.index,
+					columnKey,
+					event.target.value as SalesOrderLine[typeof columnKey]
+				)
+			}
+			className={editableInputClassName}
+		/>
+	);
+}
+
+function LookupCell<TKey extends keyof SalesOrderLine>({
+	ctx,
+	columnKey,
+	lookupCode,
+	items,
+	editingRowIndex,
+	codeAccessor,
+	mapSelection,
+}: {
+	ctx: CellContext<SalesOrderLine, unknown>;
+	columnKey: TKey;
+	lookupCode: string;
+	items?: NormalizedLookup[];
+	editingRowIndex: number | null;
+	codeAccessor?: (line: SalesOrderLine) => string | undefined;
+	mapSelection?: (item: NormalizedLookup | null) => Partial<SalesOrderLine>;
+}) {
+	const { row, table } = ctx;
+	const isEditing = editingRowIndex === row.index;
+	const currentLine = row.original;
+	const columnValue = currentLine[columnKey] as string | undefined;
+	const codeValue = codeAccessor?.(currentLine) ?? columnValue;
+	const lookupValue = resolveLookupValue(items, codeValue, columnValue);
+
+	if (!isEditing) {
+		const displayValue =
+			lookupValue?.Description && lookupValue.Description.length > 0
+				? lookupValue.Description
+				: columnValue && columnValue.length > 0
+				? columnValue
+				: '-';
+		return <span className="text-gray-300">{displayValue}</span>;
+	}
+
+	const handleLookupChange = (item: NormalizedLookup | null) => {
+		const updates =
+			mapSelection?.(item) ??
+			({
+				[columnKey]: item?.Code ?? '',
+			} as Partial<SalesOrderLine>);
+
+		Object.entries(updates).forEach(([key, val]) => {
+			table.options.meta?.updateData(
+				row.index,
+				key as keyof SalesOrderLine,
+				val as SalesOrderLine[keyof SalesOrderLine]
+			);
+		});
+	};
+
+	return (
+		<div className="max-w-xs">
+			<LookupSelect
+				lookupCode={lookupCode}
+				value={lookupValue}
+				onChange={handleLookupChange}
+				items={items}
+			/>
+		</div>
+	);
+}
+
+const createLineId = () => {
+	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+		return crypto.randomUUID();
+	}
+	return Math.random().toString(36).slice(2, 10);
+};
+
+const createLine = (
+	overrides: Partial<Omit<SalesOrderLine, 'id'>> = {}
+): SalesOrderLine => ({
+	id: createLineId(),
+	itemCode: '',
+	itemName: '',
 	description: '',
-	bf: '14',
+	bf: '',
 	width: 0,
 	length: 0,
-	unit: 'CM',
-	grain: 'Long',
-	gsm: '80',
-	reelPerPack: 1,
+	unit: '',
+	grain: '',
+	gsm: '',
+	reelPerPack: 0,
 	weightSecUnit: 0,
 	secUnit: 'Kg.',
 	weightSku: 0,
 	tolerance: 'Y',
-	sku: 'Kg.',
-	rate: 25,
+	sku: '',
+	rate: 0,
 	overhead: 0,
 	adjustment: 0,
+	...overrides,
+});
+
+const seededLines: SalesOrderLine[] = [
+	createLine({
+		itemCode: 'KP-001',
+		itemName: 'Kraft Paper',
+		bf: '14',
+		width: 120,
+		length: 150,
+		unit: 'CM',
+		grain: 'Long',
+		gsm: '80',
+		reelPerPack: 6,
+		weightSku: 3450,
+		rate: 25,
+	}),
+	createLine({
+		itemCode: 'KP-002',
+		itemName: 'Kraft Paper B',
+		bf: '16',
+		width: 100,
+		length: 120,
+		unit: 'CM',
+		grain: 'Short',
+		gsm: '90',
+		reelPerPack: 3,
+		weightSku: 1700,
+		rate: 25,
+	}),
+];
+
+const createLookupValue = (
+	code?: string,
+	description?: string
+): NormalizedLookup | null => {
+	if (!code && !description) return null;
+	return {
+		Code: code ?? description ?? '',
+		Description: description ?? code ?? '',
+		ColumnHeaders: [],
+		Additional: [],
+	};
 };
 
-export default function SalesOrderDetails() {
-	const [lines, setLines] = useState<SalesOrderLine[]>([
-		{
-			...defaultLine,
-			reelPerPack: 6,
-			weightSku: 3450,
-			rate: 25,
-			overhead: 0,
-			adjustment: 0,
-		},
-		{ ...defaultLine, reelPerPack: 3, weightSku: 1700, rate: 25 },
-	]);
+const resolveLookupValue = (
+	items: NormalizedLookup[] | undefined,
+	code?: string,
+	description?: string
+) =>
+	items?.find((item) => item.Code === code) ??
+	createLookupValue(code, description);
 
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [editingIndex, setEditingIndex] = useState<number | null>(null);
-	const [draft, setDraft] = useState<SalesOrderLine>(defaultLine);
+type SalesOrderDetailsProps = {
+	lookups?: SaleOrderLookups;
+	onDirtyChange?: (dirty: boolean) => void;
+	resetToken?: number;
+	startEmpty?: boolean;
+	readOnly?: boolean;
+};
+
+const DeleteModal = ({
+	isOpen,
+	onClose,
+	onConfirm,
+	itemsToDelete,
+	itemSummaries,
+}: {
+	isOpen: boolean;
+	onClose: () => void;
+	onConfirm: () => void;
+	itemsToDelete: string[];
+	itemSummaries: string[];
+}) => {
+	const count = itemSummaries.length || itemsToDelete.length;
+	const isMultiple = count > 1;
+	const heading = isMultiple ? 'Delete Line Items' : 'Delete Line Item';
+	const singleLabel = itemSummaries[0] ?? 'this line item';
+
+	return (
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) {
+					onClose();
+				}
+			}}
+		>
+			<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-md backdrop-blur-sm">
+				<DialogHeader>
+					<DialogTitle className="text-white">{heading}</DialogTitle>
+				</DialogHeader>
+				<div className="space-y-4">
+					{isMultiple ? (
+						<>
+							<p className="text-gray-300">
+								Are you sure you want to delete{' '}
+								<span className="font-semibold text-white">
+									{count}
+								</span>{' '}
+								line items? This action cannot be undone.
+							</p>
+							{itemSummaries.length > 0 && (
+								<div className="rounded-md border border-purple-700/60 bg-purple-900/30 p-3">
+									<ul className="space-y-1 text-sm text-gray-200">
+										{itemSummaries.map((summary, index) => (
+											<li
+												key={`${summary}-${index}`}
+												className="truncate"
+											>
+												{summary}
+											</li>
+										))}
+									</ul>
+								</div>
+							)}
+						</>
+					) : (
+						<p className="text-gray-300">
+							Are you sure you want to delete{' '}
+							<span className="font-semibold text-white">
+								{singleLabel}
+							</span>
+							? This action cannot be undone.
+						</p>
+					)}
+					<div className="flex justify-end space-x-2 pt-4">
+						<Button
+							variant="outline"
+							onClick={onClose}
+							className="border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400 bg-gray-800"
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={onConfirm}
+							disabled={itemsToDelete.length === 0}
+							className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 disabled:text-red-200/60"
+						>
+							Delete
+						</Button>
+					</div>
+				</div>
+			</DialogContent>
+		</Dialog>
+	);
+};
+
+export default function SalesOrderDetails({
+	lookups,
+	onDirtyChange,
+	resetToken = 0,
+	startEmpty = false,
+	readOnly = false,
+}: SalesOrderDetailsProps) {
+	const initialLines = startEmpty ? [] : seededLines;
+	const [lines, setLines] = useState<SalesOrderLine[]>(initialLines);
+	const [baselineLines, setBaselineLines] =
+		useState<SalesOrderLine[]>(initialLines);
+	const latestLinesRef = useRef(lines);
+	const [selectedRows, setSelectedRows] = useState<string[]>([]);
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [pendingDeletion, setPendingDeletion] = useState<string[]>([]);
+	const [pendingSummaries, setPendingSummaries] = useState<string[]>([]);
+	const selectAllRef = useRef<HTMLInputElement | null>(null);
+	const selectionCount = selectedRows.length;
+	const hasSelection = selectionCount > 0;
+	const selectableIds = useMemo(() => lines.map((line) => line.id), [lines]);
+
+	const [editingRowIndex, setEditingRowIndex] = useState<number | null>(null);
+	const editingRowRef = useRef<HTMLTableRowElement | null>(null);
+
+	const linesSignature = useMemo(() => JSON.stringify(lines), [lines]);
+	const baselineSignature = useMemo(
+		() => JSON.stringify(baselineLines),
+		[baselineLines]
+	);
+	const isDirty = linesSignature !== baselineSignature;
+
+	useEffect(() => {
+		latestLinesRef.current = lines;
+	}, [lines]);
+
+	useEffect(() => {
+		setBaselineLines(latestLinesRef.current);
+	}, [resetToken]);
+
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
+
+	useEffect(() => {
+		setSelectedRows([]);
+	}, [resetToken]);
 
 	const totals = useMemo(() => {
 		const totalQuantity = lines.reduce(
@@ -105,505 +456,525 @@ export default function SalesOrderDetails() {
 		return withOh + (Number(line.adjustment) || 0);
 	}, []);
 
-	const openAdd = useCallback(() => {
-		setEditingIndex(null);
-		setDraft({ ...defaultLine });
-		setIsModalOpen(true);
+	const addRow = useCallback(() => {
+		if (readOnly) {
+			return;
+		}
+		setLines((prev) => {
+			const nextLine = createLine();
+			const next = [...prev, nextLine];
+			setEditingRowIndex(next.length - 1);
+			return next;
+		});
+	}, [readOnly]);
+
+	useEffect(() => {
+		if (editingRowIndex === null) return;
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (target.closest('[data-slot="popover-content"]')) {
+				return;
+			}
+			if (
+				editingRowRef.current &&
+				!editingRowRef.current.contains(target)
+			) {
+				setEditingRowIndex(null);
+			}
+		};
+		document.addEventListener('mousedown', handleClickOutside);
+		return () =>
+			document.removeEventListener('mousedown', handleClickOutside);
+	}, [editingRowIndex]);
+
+	const handleRowClick = useCallback(
+		(rowIndex: number) => {
+			if (readOnly) {
+				return;
+			}
+			setEditingRowIndex((current) =>
+				current === rowIndex ? current : rowIndex
+			);
+		},
+		[readOnly]
+	);
+
+	const handleToggleRow = useCallback((rowId: string) => {
+		setSelectedRows((prev) =>
+			prev.includes(rowId)
+				? prev.filter((id) => id !== rowId)
+				: [...prev, rowId]
+		);
 	}, []);
 
-	const openEdit = useCallback(
-		(idx: number) => {
-			setEditingIndex(idx);
-			setDraft({ ...lines[idx] });
-			setIsModalOpen(true);
+	const areAllSelected =
+		selectableIds.length > 0 &&
+		selectedRows.length === selectableIds.length;
+
+	useEffect(() => {
+		if (selectAllRef.current) {
+			selectAllRef.current.indeterminate =
+				selectedRows.length > 0 && !areAllSelected;
+		}
+	}, [selectedRows.length, areAllSelected]);
+
+	useEffect(() => {
+		setSelectedRows((prev) =>
+			prev.filter((id) => selectableIds.includes(id))
+		);
+	}, [selectableIds]);
+
+	const handleToggleSelectAll = useCallback(() => {
+		setSelectedRows((prev) =>
+			prev.length === selectableIds.length ? [] : selectableIds
+		);
+	}, [selectableIds]);
+
+	const handleOpenDelete = useCallback(
+		(targetRows: string[]) => {
+			if (!targetRows.length) {
+				return;
+			}
+			setPendingDeletion(targetRows);
+			setPendingSummaries(
+				targetRows
+					.map((id) => lines.find((line) => line.id === id))
+					.filter((line): line is SalesOrderLine => Boolean(line))
+					.map((line) =>
+						[line.itemName || 'Untitled Item', line.itemCode]
+							.filter(Boolean)
+							.join(' • ')
+					)
+			);
+			setIsDeleteModalOpen(true);
 		},
 		[lines]
 	);
 
-	const removeLine = useCallback((idx: number) => {
-		setLines((prev) => prev.filter((_, i) => i !== idx));
+	const handleBulkDelete = useCallback(() => {
+		if (!selectedRows.length) {
+			return;
+		}
+		handleOpenDelete(selectedRows);
+	}, [handleOpenDelete, selectedRows]);
+
+	const handleConfirmDelete = useCallback(() => {
+		if (!pendingDeletion.length) {
+			return;
+		}
+
+		setLines((prev) =>
+			prev.filter((line) => !pendingDeletion.includes(line.id))
+		);
+		setSelectedRows((prev) =>
+			prev.filter((id) => !pendingDeletion.includes(id))
+		);
+		setIsDeleteModalOpen(false);
+		setPendingDeletion([]);
+		setPendingSummaries([]);
+
+		if (pendingDeletion.length === 1) {
+			toast.success('Line item deleted successfully.');
+			return;
+		}
+
+		toast.success(
+			`${pendingDeletion.length} line items deleted successfully.`
+		);
+	}, [pendingDeletion]);
+
+	const handleCloseDeleteModal = useCallback(() => {
+		setIsDeleteModalOpen(false);
+		setPendingDeletion([]);
+		setPendingSummaries([]);
 	}, []);
 
-	const updateDraft = useCallback(
-		(field: keyof SalesOrderLine, value: string | number) => {
-			setDraft((prev) => ({ ...prev, [field]: value as never }));
+	const updateData = useCallback(
+		(
+			rowIndex: number,
+			columnId: keyof SalesOrderLine,
+			value: SalesOrderLine[keyof SalesOrderLine]
+		) => {
+			if (readOnly) {
+				return;
+			}
+			setLines((prev) =>
+				prev.map((row, idx) =>
+					idx === rowIndex
+						? { ...row, [columnId]: value as never }
+						: row
+				)
+			);
 		},
-		[]
+		[readOnly]
 	);
 
-	const saveDraft = useCallback(() => {
-		const newLine = { ...draft };
-		if (editingIndex === null) {
-			setLines((prev) => [...prev, newLine]);
-		} else {
-			setLines((prev) =>
-				prev.map((l, i) => (i === editingIndex ? newLine : l))
-			);
-		}
-		setIsModalOpen(false);
-		setEditingIndex(null);
-	}, [draft, editingIndex]);
+	const columns = useMemo<ColumnDef<SalesOrderLine>[]>(
+		() => [
+			{
+				id: 'select',
+				header: () => (
+					<input
+						ref={selectAllRef}
+						type="checkbox"
+						onChange={handleToggleSelectAll}
+						checked={areAllSelected}
+						className="h-4 w-4 cursor-pointer accent-purple-500"
+						aria-label="Select all line items"
+						disabled={readOnly}
+					/>
+				),
+				cell: ({ row }) => (
+					<input
+						type="checkbox"
+						checked={selectedRows.includes(row.original.id)}
+						onMouseDown={(event) => event.stopPropagation()}
+						onClick={(event) => event.stopPropagation()}
+						onChange={(event) => {
+							event.stopPropagation();
+							handleToggleRow(row.original.id);
+						}}
+						className="h-4 w-4 cursor-pointer accent-purple-500"
+						aria-label={`Select line item ${row.index + 1}`}
+						disabled={readOnly}
+					/>
+				),
+				size: 40,
+				enableSorting: false,
+				enableColumnFilter: false,
+			},
+			{
+				id: 'serial',
+				header: () => <span className="text-gray-300">S. No.</span>,
+				cell: ({ row }) => (
+					<span className="text-white">{row.index + 1}</span>
+				),
+			},
+			{
+				accessorKey: 'itemName',
+				header: () => <span className="text-gray-300">Item Name</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="itemName"
+						lookupCode="SORD_FHPGD_Item"
+						items={lookups?.items}
+						editingRowIndex={editingRowIndex}
+						codeAccessor={(line) => line.itemCode}
+						mapSelection={(item) => ({
+							itemName: item?.Description ?? '',
+							itemCode: item?.Code ?? '',
+						})}
+					/>
+				),
+			},
+			{
+				accessorKey: 'bf',
+				header: () => <span className="text-gray-300">BF</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="bf"
+						lookupCode="SORD_FHPGD_BF"
+						items={lookups?.bfs}
+						editingRowIndex={editingRowIndex}
+						mapSelection={(item) => ({ bf: item?.Code ?? '' })}
+					/>
+				),
+			},
+			{
+				accessorKey: 'width',
+				header: () => <span className="text-gray-300">Width</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="width"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'length',
+				header: () => <span className="text-gray-300">Length</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="length"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'unit',
+				header: () => <span className="text-gray-300">Unit</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="unit"
+						lookupCode="SORD_FHPGD_SizeUnit"
+						items={lookups?.sizeUnits}
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'grain',
+				header: () => <span className="text-gray-300">Grain</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="grain"
+						lookupCode="SORD_FHPGD_Grain"
+						items={lookups?.grains}
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'gsm',
+				header: () => <span className="text-gray-300">GSM</span>,
+				cell: (ctx) => (
+					<LookupCell
+						ctx={ctx}
+						columnKey="gsm"
+						lookupCode="SORD_FHPGD_GSM"
+						items={lookups?.gsms}
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'reelPerPack',
+				header: () => (
+					<span className="text-gray-300">Reel / Pack</span>
+				),
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="reelPerPack"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'weightSku',
+				header: () => (
+					<span className="text-gray-300">Weight (SKU)</span>
+				),
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="weightSku"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'sku',
+				header: () => <span className="text-gray-300">SKU</span>,
+				cell: (ctx) => (
+					<TextCell
+						ctx={ctx}
+						columnKey="sku"
+						editingRowIndex={editingRowIndex}
+					/>
+				),
+			},
+			{
+				accessorKey: 'rate',
+				header: () => <span className="text-gray-300">Rate</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="rate"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				id: 'amount',
+				header: () => <span className="text-gray-300">Amount</span>,
+				cell: ({ row }) => (
+					<span className="text-gray-300">
+						{amountFor(row.original).toFixed(2)}
+					</span>
+				),
+			},
+			{
+				accessorKey: 'overhead',
+				header: () => <span className="text-gray-300">OH</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="overhead"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+			{
+				accessorKey: 'adjustment',
+				header: () => <span className="text-gray-300">Adj</span>,
+				cell: (ctx) => (
+					<NumberCell
+						ctx={ctx}
+						columnKey="adjustment"
+						editingRowIndex={editingRowIndex}
+						decimal
+					/>
+				),
+			},
+		],
+		[
+			editingRowIndex,
+			lookups,
+			amountFor,
+			handleToggleRow,
+			handleToggleSelectAll,
+			areAllSelected,
+			selectedRows,
+			readOnly,
+		]
+	);
+
+	const table = useReactTable({
+		data: lines,
+		columns,
+		getCoreRowModel: getCoreRowModel(),
+		meta: {
+			updateData,
+		},
+	});
 
 	return (
 		<div className="space-y-4">
 			<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
 				<CardHeader>
-					<div className="flex items-center justify-between">
+					<div className="flex items-center justify-between gap-4">
 						<CardTitle className="text-white text-xl">
 							Sales Order Details
 						</CardTitle>
-						<Button
-							onClick={openAdd}
-							className="bg-purple-600 hover:bg-purple-700 text-white"
-						>
-							<Plus className="h-4 w-4 mr-1" /> Add Row
-						</Button>
+						<div className="flex items-center gap-2">
+							<Button
+								onClick={addRow}
+								className="bg-purple-600 hover:bg-purple-700 text-white"
+								disabled={readOnly}
+							>
+								<Plus className="h-4 w-4 mr-1" /> Add Row
+							</Button>
+							{hasSelection && (
+								<Button
+									onClick={handleBulkDelete}
+									className="bg-red-600 hover:bg-red-700 text-white"
+									disabled={readOnly}
+								>
+									<Trash2 className="h-4 w-4 mr-1" /> Delete
+								</Button>
+							)}
+						</div>
 					</div>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div className="rounded-lg border border-purple-900 overflow-hidden">
 						<Table>
 							<TableHeader>
-								<TableRow className="bg-gray-800/50 border-purple-900 hover:bg-gray-800/50">
-									<TableHead className="text-gray-300">
-										S. No.
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Item Name
-									</TableHead>
-									<TableHead className="text-gray-300">
-										BF
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Width
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Length
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Unit
-									</TableHead>
-									<TableHead className="text-gray-300">
-										GSM
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Reel / Pack
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Weight (SKU)
-									</TableHead>
-									<TableHead className="text-gray-300">
-										SKU
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Rate
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Amount
-									</TableHead>
-									<TableHead className="text-gray-300">
-										OH
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Adj
-									</TableHead>
-									<TableHead className="text-gray-300">
-										Actions
-									</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{lines.map((line, idx) => (
+								{table.getHeaderGroups().map((headerGroup) => (
 									<TableRow
-										key={idx}
-										className="border-purple-900 hover:bg-gray-800/30"
+										key={headerGroup.id}
+										className="bg-gray-800/50 border-purple-900 hover:bg-gray-800/50"
 									>
-										<TableCell className="text-white">
-											{idx + 1}
-										</TableCell>
-										<TableCell className="text-gray-200">
-											{line.itemName}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.bf}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.width.toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.length.toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.unit}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.gsm}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.reelPerPack.toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.weightSku.toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.sku}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.rate.toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{amountFor(line).toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.overhead.toFixed(2)}
-										</TableCell>
-										<TableCell className="text-gray-300">
-											{line.adjustment.toFixed(2)}
-										</TableCell>
-										<TableCell>
-											<div className="flex space-x-2">
-												<Button
-													size="sm"
-													variant="ghost"
-													onClick={() =>
-														openEdit(idx)
-													}
-													className="text-purple-400 hover:text-purple-300 hover:bg-purple-600/20"
-												>
-													<Edit className="h-4 w-4" />
-												</Button>
-												<Button
-													size="sm"
-													variant="ghost"
-													onClick={() =>
-														removeLine(idx)
-													}
-													className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
-												>
-													<Trash2 className="h-4 w-4" />
-												</Button>
-											</div>
-										</TableCell>
+										{headerGroup.headers.map((header) => (
+											<TableHead
+												key={header.id}
+												className="text-gray-300"
+											>
+												{header.isPlaceholder
+													? null
+													: flexRender(
+															header.column
+																.columnDef
+																.header,
+															header.getContext()
+													  )}
+											</TableHead>
+										))}
 									</TableRow>
 								))}
-							</TableBody>
-							<TableHeader>
-								<TableRow className="bg-gray-800/50 border-purple-900 hover:bg-gray-800/50">
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300">
-										{totals.totalQuantity.toFixed(2)}
-									</TableHead>
-									<TableHead className="text-gray-300">
-										{totals.totalWeight.toFixed(2)}
-									</TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-									<TableHead className="text-gray-300"></TableHead>
-								</TableRow>
 							</TableHeader>
+							<TableBody>
+								{table.getRowModel().rows.length ? (
+									table.getRowModel().rows.map((row) => (
+										<TableRow
+											key={row.id}
+											ref={
+												row.index === editingRowIndex
+													? editingRowRef
+													: undefined
+											}
+											className={`border-purple-900 hover:bg-gray-800/30 ${
+												editingRowIndex !== row.index
+													? 'cursor-pointer'
+													: ''
+											}`}
+											onClick={() =>
+												handleRowClick(row.index)
+											}
+										>
+											{row
+												.getVisibleCells()
+												.map((cell) => (
+													<TableCell
+														key={cell.id}
+														className="text-gray-300"
+													>
+														{flexRender(
+															cell.column
+																.columnDef.cell,
+															cell.getContext()
+														)}
+													</TableCell>
+												))}
+										</TableRow>
+									))
+								) : (
+									<TableRow>
+										<TableCell
+											colSpan={columns.length}
+											className="text-center text-gray-400"
+										>
+											No lines added yet.
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
+							<TableFooter>
+								<TableRow className="bg-gray-800/50 border-purple-900">
+									<TableCell colSpan={9} />
+									<TableCell className="text-gray-300 font-semibold">
+										{totals.totalQuantity.toFixed(2)}
+									</TableCell>
+									<TableCell className="text-gray-300 font-semibold">
+										{totals.totalWeight.toFixed(2)}
+									</TableCell>
+									<TableCell colSpan={5} />
+								</TableRow>
+							</TableFooter>
 						</Table>
 					</div>
 				</CardContent>
 			</Card>
-
-			{/* Add/Edit Modal */}
-			<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-				<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-3xl backdrop-blur-sm">
-					<DialogHeader>
-						<DialogTitle className="text-white">
-							{editingIndex === null ? 'Add Line' : 'Edit Line'}
-						</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
-						{/* Row 1: Item Name, BF, GSM */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">
-									Item Name
-								</Label>
-								<Select
-									value={draft.itemName}
-									onValueChange={(v) =>
-										updateDraft('itemName', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select item name" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="Kraft Paper">
-											Kraft Paper
-										</SelectItem>
-										<SelectItem value="Newsprint">
-											Newsprint
-										</SelectItem>
-										<SelectItem value="Coated Paper">
-											Coated Paper
-										</SelectItem>
-										<SelectItem value="Cardboard">
-											Cardboard
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">BF</Label>
-								<Select
-									value={draft.bf}
-									onValueChange={(v) => updateDraft('bf', v)}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select BF" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="14">14</SelectItem>
-										<SelectItem value="16">16</SelectItem>
-										<SelectItem value="18">18</SelectItem>
-										<SelectItem value="20">20</SelectItem>
-										<SelectItem value="22">22</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">GSM</Label>
-								<Select
-									value={draft.gsm}
-									onValueChange={(v) => updateDraft('gsm', v)}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select GSM" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="80">80</SelectItem>
-										<SelectItem value="100">100</SelectItem>
-										<SelectItem value="120">120</SelectItem>
-										<SelectItem value="150">150</SelectItem>
-										<SelectItem value="200">200</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-
-						{/* Row 2: Width, Length, Unit */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">Width</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={draft.width.toFixed(2)}
-									onChange={(e) =>
-										updateDraft(
-											'width',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Length</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={draft.length.toFixed(2)}
-									onChange={(e) =>
-										updateDraft(
-											'length',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Unit</Label>
-								<Select
-									value={draft.unit}
-									onValueChange={(v) =>
-										updateDraft('unit', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="CM">CM</SelectItem>
-										<SelectItem value="IN">IN</SelectItem>
-										<SelectItem value="MM">MM</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-
-						{/* Row 3: Grain, Reel / Pack, Weight (SKU) */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">Grain</Label>
-								<Select
-									value={draft.grain}
-									onValueChange={(v) =>
-										updateDraft('grain', v)
-									}
-								>
-									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-										<SelectValue placeholder="Select grain" />
-									</SelectTrigger>
-									<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-										<SelectItem value="Long">
-											Long
-										</SelectItem>
-										<SelectItem value="Short">
-											Short
-										</SelectItem>
-										<SelectItem value="Cross">
-											Cross
-										</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">
-									Reel / Pack
-								</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={draft.reelPerPack.toFixed(2)}
-									onChange={(e) =>
-										updateDraft(
-											'reelPerPack',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">
-									Weight (SKU)
-								</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={draft.weightSku.toFixed(2)}
-									onChange={(e) =>
-										updateDraft(
-											'weightSku',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-						</div>
-
-						{/* Row 4: Rate, OH, Adj */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">Rate</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={draft.rate.toFixed(2)}
-									onChange={(e) =>
-										updateDraft(
-											'rate',
-											Number.parseFloat(e.target.value) ||
-												0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">OH</Label>
-								<Input
-									type="number"
-									value={String(draft.overhead)}
-									onChange={(e) =>
-										updateDraft(
-											'overhead',
-											Number(e.target.value) || 0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Adj</Label>
-								<Input
-									type="number"
-									value={String(draft.adjustment)}
-									onChange={(e) =>
-										updateDraft(
-											'adjustment',
-											Number(e.target.value) || 0
-										)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-						</div>
-
-						{/* Row 5: SKU, Amount */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<Label className="text-gray-300">SKU</Label>
-								<Input
-									value={draft.sku}
-									onChange={(e) =>
-										updateDraft('sku', e.target.value)
-									}
-									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label className="text-gray-300">Amount</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={amountFor(draft).toFixed(2)}
-									readOnly
-									className="bg-purple-950/50 border-purple-700 text-white"
-								/>
-							</div>
-							<div className="space-y-2">
-								{/* Empty column to maintain 3-column layout */}
-							</div>
-						</div>
-
-						<div className="flex justify-end space-x-2 pt-2">
-							<Button
-								variant="outline"
-								onClick={() => setIsModalOpen(false)}
-								className="border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-400 bg-gray-800"
-							>
-								Cancel
-							</Button>
-							<Button
-								onClick={saveDraft}
-								className="bg-purple-600 hover:bg-purple-700"
-							>
-								Save
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
+			<DeleteModal
+				isOpen={isDeleteModalOpen}
+				onClose={handleCloseDeleteModal}
+				onConfirm={handleConfirmDelete}
+				itemsToDelete={pendingDeletion}
+				itemSummaries={pendingSummaries}
+			/>
 		</div>
 	);
 }
