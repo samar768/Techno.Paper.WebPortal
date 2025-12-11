@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -15,6 +15,9 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { LookupSelect } from '@/components/ui/lookup-select';
+import { type NormalizedLookup } from '@/lib/schemas/schema-lookup-data';
+import type { SaleOrderLookups } from '@/lib/lookup-types';
 
 type YesNo = 'Y' | 'N';
 
@@ -42,10 +45,21 @@ type SalesOrderHeaderForm = {
 	closed: boolean;
 };
 
+const createTodayDateTimeLocal = () => {
+	const now = new Date();
+	const pad = (value: number) => value.toString().padStart(2, '0');
+	const year = now.getFullYear();
+	const month = pad(now.getMonth() + 1);
+	const day = pad(now.getDate());
+	const hours = pad(now.getHours());
+	const minutes = pad(now.getMinutes());
+	return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const initialForm: SalesOrderHeaderForm = {
 	voucherType: '',
 	orderNo: '',
-	date: '',
+	date: createTodayDateTimeLocal(),
 	partyOrderNo: '',
 	partyDate: '',
 	exciseable: 'Y',
@@ -66,14 +80,102 @@ const initialForm: SalesOrderHeaderForm = {
 	closed: false,
 };
 
-export default function SalesOrderHeader() {
+type SalesOrderHeaderProps = {
+	lookups?: SaleOrderLookups;
+	onDirtyChange?: (dirty: boolean) => void;
+	onRegisterSaveHandler?: (handler: () => boolean) => void;
+	resetToken?: number;
+	readOnly?: boolean;
+};
+
+export default function SalesOrderHeader({
+	lookups,
+	onDirtyChange,
+	onRegisterSaveHandler,
+	resetToken = 0,
+	readOnly = false,
+}: SalesOrderHeaderProps) {
 	const [form, setForm] = useState<SalesOrderHeaderForm>(initialForm);
+	const [baselineForm, setBaselineForm] =
+		useState<SalesOrderHeaderForm>(initialForm);
+	const latestFormRef = useRef(form);
+	const [selectedVoucherType, setSelectedVoucherType] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedSaleVoucher, setSelectedSaleVoucher] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedParty, setSelectedParty] = useState<NormalizedLookup | null>(
+		null
+	);
+	const [selectedDeliveryTo, setSelectedDeliveryTo] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedConsignee, setSelectedConsignee] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedToPlace, setSelectedToPlace] =
+		useState<NormalizedLookup | null>(null);
+	const [selectedOrderType, setSelectedOrderType] =
+		useState<NormalizedLookup | null>(null);
 
 	const handleChange = useCallback(
 		(field: keyof SalesOrderHeaderForm, value: string | boolean) => {
 			setForm((prev) => ({ ...prev, [field]: value }));
 		},
 		[]
+	);
+
+	const handleVoucherTypeChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedVoucherType(item);
+			handleChange('voucherType', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleSaleVoucherChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedSaleVoucher(item);
+			handleChange('saleVType', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handlePartyChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedParty(item);
+			handleChange('party', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleDeliveryToChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedDeliveryTo(item);
+			handleChange('deliveryTo', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleConsigneeChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedConsignee(item);
+			handleChange('consignee', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleToPlaceChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedToPlace(item);
+			handleChange('toPlace', item?.Code ?? '');
+		},
+		[handleChange]
+	);
+
+	const handleOrderTypeChange = useCallback(
+		(item: NormalizedLookup | null) => {
+			setSelectedOrderType(item);
+			handleChange('orderType', item?.Code ?? '');
+		},
+		[handleChange]
 	);
 
 	const requiredErrors = useMemo(() => {
@@ -95,10 +197,35 @@ export default function SalesOrderHeader() {
 	const handleSubmit = useCallback(() => {
 		if (requiredErrors.length > 0) {
 			toast.error(requiredErrors.join('\n'));
-			return;
+			return false;
 		}
 		toast.success('Sales Order Header saved');
+		return true;
 	}, [requiredErrors]);
+
+	const formSignature = useMemo(() => JSON.stringify(form), [form]);
+	const baselineSignature = useMemo(
+		() => JSON.stringify(baselineForm),
+		[baselineForm]
+	);
+	const isDirty = formSignature !== baselineSignature;
+
+	useEffect(() => {
+		latestFormRef.current = form;
+	}, [form]);
+
+	useEffect(() => {
+		setBaselineForm(latestFormRef.current);
+	}, [resetToken]);
+
+	useEffect(() => {
+		onDirtyChange?.(isDirty);
+	}, [isDirty, onDirtyChange]);
+
+	useEffect(() => {
+		if (!onRegisterSaveHandler) return;
+		onRegisterSaveHandler(() => handleSubmit());
+	}, [handleSubmit, onRegisterSaveHandler]);
 
 	return (
 		<div className="space-y-4">
@@ -111,401 +238,383 @@ export default function SalesOrderHeader() {
 						Back
 					</Button>
 				</Link>
-				<div className="flex gap-2">
-					<Button
-						className="bg-purple-600 hover:bg-purple-700 text-white"
-						onClick={handleSubmit}
-					>
-						Save
-					</Button>
-				</div>
 			</div>
 
-			<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
-				<CardHeader>
-					<CardTitle className="text-white text-xl">
-						Sales Order Header Details
-					</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-6">
-					{/* Unified 12-column grid to match screenshot spacing */}
-					<div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-						{/* Voucher Type */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">
-								Voucher Type{' '}
-								<span className="text-red-400">*</span>
-							</Label>
-							<Select
-								value={form.voucherType}
-								onValueChange={(v) =>
-									handleChange('voucherType', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select voucher type" />
-								</SelectTrigger>
-								<SelectContent className="bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="SOGST">
-										SOGST - Sale Order Against GST
-									</SelectItem>
-									<SelectItem value="SOGST-RET">
-										SOGST-RET - Sale Order Return
-									</SelectItem>
-								</SelectContent>
-							</Select>
+			{/* Two responsive cards: left = Sale Order Information, right = Party Information */}
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				{/* Sale Order Information Card */}
+				<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-white text-lg">
+							Sale Order Information
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+							{/* Type (Voucher Type) */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Type <span className="text-red-400">*</span>
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_FHP_TYPE"
+									value={selectedVoucherType}
+									onChange={handleVoucherTypeChange}
+									items={lookups?.voucherTypes}
+									readOnly={readOnly}
+								/>
+							</div>
+
+							{/* Order No */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Order No{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<Input
+									type="number"
+									placeholder="1"
+									value={form.orderNo}
+									onChange={(e) =>
+										handleChange('orderNo', e.target.value)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
+
+							{/* Order Date */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Order Date{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<Input
+									type="datetime-local"
+									value={form.date}
+									onChange={(e) =>
+										handleChange('date', e.target.value)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
+								/>
+							</div>
+
+							{/* Sale Voucher (Sale V_Type) */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Sale Voucher{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_FHP_Sale_VType"
+									value={selectedSaleVoucher}
+									onChange={handleSaleVoucherChange}
+									items={lookups?.saleVTypes}
+									readOnly={readOnly}
+								/>
+							</div>
+
+							{/* Party Order */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Party Order{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<Input
+									type="number"
+									placeholder="1"
+									value={form.partyOrderNo}
+									onChange={(e) =>
+										handleChange(
+											'partyOrderNo',
+											e.target.value
+										)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
+
+							{/* Party Order Date */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Party Order Date
+								</Label>
+								<Input
+									type="date"
+									value={form.partyDate}
+									onChange={(e) =>
+										handleChange(
+											'partyDate',
+											e.target.value
+										)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
+								/>
+							</div>
+
+							{/* Amendment Order No (mapped from Existing Order) */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Amendment Order No
+								</Label>
+								<Select
+									value={form.existingOrder}
+									onValueChange={(v) =>
+										handleChange('existingOrder', v)
+									}
+									disabled={readOnly}
+								>
+									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
+										<SelectValue placeholder="Select amendment order" />
+									</SelectTrigger>
+									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
+										<SelectItem value="none">
+											None
+										</SelectItem>
+										<SelectItem value="EO-1001">
+											EO-1001
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
-						{/* Party Order No */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">
-								Party Order No{' '}
-								<span className="text-red-400">*</span>
-							</Label>
-							<Input
-								type="number"
-								placeholder="1"
-								value={form.partyOrderNo}
-								onChange={(e) =>
-									handleChange('partyOrderNo', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
-						{/* Party Date */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">Party Date</Label>
-							<Input
-								type="date"
-								value={form.partyDate}
-								onChange={(e) =>
-									handleChange('partyDate', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
-							/>
-						</div>
-						{/* Order No */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">
-								Order No <span className="text-red-400">*</span>
-							</Label>
-							<Input
-								type="number"
-								placeholder="1"
-								value={form.orderNo}
-								onChange={(e) =>
-									handleChange('orderNo', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
+					</CardContent>
+				</Card>
+
+				{/* Party Information Card */}
+				<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-white text-lg">
+							Party Information
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+							{/* Party Name */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Party Name
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_CUSTOMER"
+									value={selectedParty}
+									onChange={handlePartyChange}
+									items={lookups?.customers}
+									readOnly={readOnly}
+								/>
+							</div>
+
+							{/* Distributor */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Distributor
+								</Label>
+								<Input
+									placeholder="Distributor name"
+									value={form.distributor}
+									onChange={(e) =>
+										handleChange(
+											'distributor',
+											e.target.value
+										)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
+
+							{/* Delivery To */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Delivery To
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_FHP_City"
+									value={selectedDeliveryTo}
+									onChange={handleDeliveryToChange}
+									items={lookups?.cities}
+									readOnly={readOnly}
+								/>
+							</div>
+
+							{/* Delivery Date */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Delivery Date{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<Input
+									type="date"
+									value={form.deliveryDate}
+									onChange={(e) =>
+										handleChange(
+											'deliveryDate',
+											e.target.value
+										)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
+								/>
+							</div>
+
+							{/* Consignee */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Consignee{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_CUSTOMER"
+									value={selectedConsignee}
+									onChange={handleConsigneeChange}
+									items={lookups?.customers}
+									readOnly={readOnly}
+								/>
+							</div>
+
+							{/* To Place */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									To Place
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_FHP_City"
+									value={selectedToPlace}
+									onChange={handleToPlaceChange}
+									items={lookups?.cities}
+									readOnly={readOnly}
+								/>
+							</div>
 						</div>
 
-						{/* Date */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">
-								Date <span className="text-red-400">*</span>
-							</Label>
-							<Input
-								type="datetime-local"
-								value={form.date}
-								onChange={(e) =>
-									handleChange('date', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
-							/>
-						</div>
+						{/* Keep remaining header-related fields grouped at bottom to avoid layout regressions */}
+						<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+							{/* Order Type */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Order Type{' '}
+									<span className="text-red-400">*</span>
+								</Label>
+								<LookupSelect
+									lookupCode="SORD_FHP_OrderType"
+									value={selectedOrderType}
+									onChange={handleOrderTypeChange}
+									items={lookups?.orderTypes}
+									readOnly={readOnly}
+								/>
+							</div>
 
-						{/* Exciseable */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">Exciseable</Label>
-							<Select
-								value={form.exciseable}
-								onValueChange={(v) =>
-									handleChange('exciseable', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="Y">Y - Yes</SelectItem>
-									<SelectItem value="N">N - No</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-						{/* Existing Order */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">
-								Existing Order
-							</Label>
-							<Select
-								value={form.existingOrder}
-								onValueChange={(v) =>
-									handleChange('existingOrder', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select a value" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="none">None</SelectItem>
-									<SelectItem value="EO-1001">
-										EO-1001
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
+							{/* Remark */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">Remark</Label>
+								<Input
+									placeholder="Remarks..."
+									value={form.remark}
+									onChange={(e) =>
+										handleChange('remark', e.target.value)
+									}
+									readOnly={readOnly}
+									disabled={readOnly}
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
 
-						{/* Party */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">Party</Label>
-							<Select
-								value={form.party}
-								onValueChange={(v) => handleChange('party', v)}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select a party" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="HO10279">
-										HO10279 - 3K PACK PRO
-									</SelectItem>
-									<SelectItem value="HO28341">
-										HO28341 - Paper Co.
-									</SelectItem>
-								</SelectContent>
-							</Select>
+							{/* Closed */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">Closed</Label>
+								<Select
+									value={form.closed ? 'Y' : 'N'}
+									onValueChange={(v) =>
+										handleChange('closed', v === 'Y')
+									}
+									disabled={readOnly}
+								>
+									<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
+										<SelectValue placeholder="Select" />
+									</SelectTrigger>
+									<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
+										<SelectItem value="Y">
+											Y - Yes
+										</SelectItem>
+										<SelectItem value="N">
+											N - No
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
+					</CardContent>
+				</Card>
 
-						{/* Delivery To */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">Delivery To</Label>
-							<Select
-								value={form.deliveryTo}
-								onValueChange={(v) =>
-									handleChange('deliveryTo', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select a value" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="main">
-										Main Warehouse
-									</SelectItem>
-									<SelectItem value="branch-a">
-										Branch A
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
+				{/* Audit Information Card */}
+				<Card className="bg-gray-900/50 border-purple-700 backdrop-blur-sm md:col-span-2">
+					<CardHeader className="pb-3">
+						<CardTitle className="text-white text-lg">
+							Audit Information
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+							{/* Prepared By */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Prepared By
+								</Label>
+								<Input
+									value={form.preparedBy}
+									disabled
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
 
-						{/* Distributor */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">Distributor</Label>
-							<Input
-								placeholder="Distributor name"
-								value={form.distributor}
-								onChange={(e) =>
-									handleChange('distributor', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
+							{/* Modified By */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Modified By
+								</Label>
+								<Input
+									value={form.modifiedBy}
+									disabled
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
 
-						{/* Delivery Date */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">
-								Delivery Date{' '}
-								<span className="text-red-400">*</span>
-							</Label>
-							<Input
-								type="date"
-								value={form.deliveryDate}
-								onChange={(e) =>
-									handleChange('deliveryDate', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-400 [&::-webkit-calendar-picker-indicator]:invert"
-							/>
-						</div>
+							{/* Approved By */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Approved By
+								</Label>
+								<Input
+									value={form.approvedBy}
+									disabled
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
 
-						{/* Order Type */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">
-								Order Type{' '}
-								<span className="text-red-400">*</span>
-							</Label>
-							<Select
-								value={form.orderType}
-								onValueChange={(v) =>
-									handleChange('orderType', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select order type" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="sheet">
-										S - Sheet
-									</SelectItem>
-									<SelectItem value="roll">
-										R - Roll
-									</SelectItem>
-								</SelectContent>
-							</Select>
+							{/* Booked By */}
+							<div className="space-y-2">
+								<Label className="text-gray-300">
+									Booked By
+								</Label>
+								<Input
+									value={form.bookedBy}
+									disabled
+									className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
+								/>
+							</div>
 						</div>
-
-						{/* Consignee */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">
-								Consignee{' '}
-								<span className="text-red-400">*</span>
-							</Label>
-							<Select
-								value={form.consignee}
-								onValueChange={(v) =>
-									handleChange('consignee', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select consignee" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="HO10279">
-										HO10279 - 3K PACK PRO
-									</SelectItem>
-									<SelectItem value="HO28341">
-										HO28341 - Paper Co.
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* Sale V_Type */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">
-								Sale V_Type{' '}
-								<span className="text-red-400">*</span>
-							</Label>
-							<Select
-								value={form.saleVType}
-								onValueChange={(v) =>
-									handleChange('saleVType', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select Sale V_Type" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="HO10279">
-										HO10279 - 3K PACK PRO
-									</SelectItem>
-									<SelectItem value="HO28341">
-										HO28341 - Paper Co.
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* To Place */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">To Place</Label>
-							<Select
-								value={form.toPlace}
-								onValueChange={(v) =>
-									handleChange('toPlace', v)
-								}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select a value" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="factory">
-										Factory
-									</SelectItem>
-									<SelectItem value="warehouse">
-										Warehouse
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						{/* Remark */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">Remark</Label>
-							<Input
-								placeholder="Remarks..."
-								value={form.remark}
-								onChange={(e) =>
-									handleChange('remark', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
-
-						{/* Prepared/Modified By */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">Prepared By</Label>
-							<Input
-								value={form.preparedBy}
-								onChange={(e) =>
-									handleChange('preparedBy', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
-
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">Modified By</Label>
-							<Input
-								value={form.modifiedBy}
-								onChange={(e) =>
-									handleChange('modifiedBy', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
-
-						{/* Approved/Booked By */}
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">Approved By</Label>
-							<Input
-								value={form.approvedBy}
-								onChange={(e) =>
-									handleChange('approvedBy', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
-						<div className="space-y-2 lg:col-span-3">
-							<Label className="text-gray-300">Booked By</Label>
-							<Input
-								value={form.bookedBy}
-								onChange={(e) =>
-									handleChange('bookedBy', e.target.value)
-								}
-								className="bg-purple-950/80 border-purple-700 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-400"
-							/>
-						</div>
-
-						{/* Closed */}
-						<div className="space-y-2 lg:col-span-6">
-							<Label className="text-gray-300">Closed</Label>
-							<Select
-								value={form.closed ? 'Y' : 'N'}
-								onValueChange={(v) => handleChange('closed', v)}
-							>
-								<SelectTrigger className="w-full bg-purple-950/80 border-purple-700 text-white focus:ring-2 focus:ring-purple-500 [&>svg]:text-white">
-									<SelectValue placeholder="Select" />
-								</SelectTrigger>
-								<SelectContent className="w-full bg-[#2c0b5e] border-purple-800 text-white **:data-highlighted:bg-purple-800 **:data-highlighted:text-white">
-									<SelectItem value="Y">Y - Yes</SelectItem>
-									<SelectItem value="N">N - No</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
+					</CardContent>
+				</Card>
+			</div>
 		</div>
 	);
 }

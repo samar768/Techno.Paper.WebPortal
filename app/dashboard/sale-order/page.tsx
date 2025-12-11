@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Edit, Search, Plus, Trash2 } from 'lucide-react';
+import { Edit, Search, Plus, Trash2, Eye } from 'lucide-react';
 
 interface InventoryItem {
 	sku: string;
@@ -46,29 +46,59 @@ const DeleteModal = ({
 	isOpen,
 	onClose,
 	onConfirm,
-	itemSku,
+	itemsToDelete,
 }: {
 	isOpen: boolean;
 	onClose: () => void;
 	onConfirm: () => void;
-	itemSku: string;
+	itemsToDelete: string[];
 }) => {
+	const isMultiple = itemsToDelete.length > 1;
+	const heading = isMultiple ? 'Delete Sale Orders' : 'Delete Sale Order';
+	const singleLabel = itemsToDelete[0] ?? 'this sale order';
+
 	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) {
+					onClose();
+				}
+			}}
+		>
 			<DialogContent className="bg-linear-to-br from-purple-950 via-purple-900 to-purple-950 border-purple-800 text-white max-w-md backdrop-blur-sm">
 				<DialogHeader>
-					<DialogTitle className="text-white">
-						Delete Paper Roll
-					</DialogTitle>
+					<DialogTitle className="text-white">{heading}</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
-					<p className="text-gray-300">
-						Are you sure you want to delete paper roll{' '}
-						<span className="font-semibold text-white">
-							{itemSku}
-						</span>
-						? This action cannot be undone.
-					</p>
+					{isMultiple ? (
+						<>
+							<p className="text-gray-300">
+								Are you sure you want to delete{' '}
+								<span className="font-semibold text-white">
+									{itemsToDelete.length}
+								</span>{' '}
+								sale orders? This action cannot be undone.
+							</p>
+							<div className="rounded-md border border-purple-700/60 bg-purple-900/30 p-3">
+								<ul className="space-y-1 text-sm text-gray-200">
+									{itemsToDelete.map((sku) => (
+										<li key={sku} className="truncate">
+											{sku}
+										</li>
+									))}
+								</ul>
+							</div>
+						</>
+					) : (
+						<p className="text-gray-300">
+							Are you sure you want to delete sale order{' '}
+							<span className="font-semibold text-white">
+								{singleLabel}
+							</span>
+							? This action cannot be undone.
+						</p>
+					)}
 					<div className="flex justify-end space-x-2 pt-4">
 						<Button
 							variant="outline"
@@ -79,7 +109,8 @@ const DeleteModal = ({
 						</Button>
 						<Button
 							onClick={onConfirm}
-							className="bg-red-600 hover:bg-red-700"
+							disabled={itemsToDelete.length === 0}
+							className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 disabled:text-red-200/60"
 						>
 							Delete
 						</Button>
@@ -97,7 +128,9 @@ export default function InventoryPage() {
 	const [locationFilter, setLocationFilter] = useState('all');
 	const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-	const [itemToDelete, setItemToDelete] = useState<string>('');
+	const [itemsToDelete, setItemsToDelete] = useState<string[]>([]);
+	const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
+	const selectAllRef = useRef<HTMLInputElement | null>(null);
 
 	const [inventory, setInventory] = useState<InventoryItem[]>([
 		{
@@ -158,6 +191,31 @@ export default function InventoryPage() {
 		});
 	}, [inventory, searchTerm, statusFilter, locationFilter]);
 
+	const filteredSelectedCount = useMemo(() => {
+		return filteredInventory.reduce(
+			(count, item) =>
+				selectedSkus.includes(item.sku) ? count + 1 : count,
+			0
+		);
+	}, [filteredInventory, selectedSkus]);
+
+	const areAllFilteredSelected =
+		filteredInventory.length > 0 &&
+		filteredSelectedCount === filteredInventory.length;
+
+	useEffect(() => {
+		if (selectAllRef.current) {
+			selectAllRef.current.indeterminate =
+				filteredSelectedCount > 0 && !areAllFilteredSelected;
+		}
+	}, [areAllFilteredSelected, filteredSelectedCount]);
+
+	useEffect(() => {
+		setSelectedSkus((prev) =>
+			prev.filter((sku) => inventory.some((item) => item.sku === sku))
+		);
+	}, [inventory]);
+
 	// Validation function
 	const validateItem = (item: InventoryItem): string[] => {
 		const errors: string[] = [];
@@ -187,20 +245,92 @@ export default function InventoryPage() {
 		[router]
 	);
 
+	const handleView = useCallback(
+		(item: InventoryItem) => {
+			router.push(
+				`/dashboard/sale-order/${encodeURIComponent(
+					item.sku
+				)}?mode=view`
+			);
+		},
+		[router]
+	);
+
+	const handleToggleSelect = useCallback((sku: string) => {
+		setSelectedSkus((prev) =>
+			prev.includes(sku)
+				? prev.filter((value) => value !== sku)
+				: [...prev, sku]
+		);
+	}, []);
+
+	const handleToggleSelectAll = useCallback(() => {
+		const filteredSkus = filteredInventory.map((item) => item.sku);
+		const filteredSet = new Set(filteredSkus);
+
+		setSelectedSkus((prev) => {
+			const prevSet = new Set(prev);
+			const shouldUnselect = filteredSkus.every((sku) =>
+				prevSet.has(sku)
+			);
+
+			if (shouldUnselect) {
+				return prev.filter((sku) => !filteredSet.has(sku));
+			}
+
+			const next = [...prev];
+			filteredSkus.forEach((sku) => {
+				if (!prevSet.has(sku)) {
+					next.push(sku);
+				}
+			});
+			return next;
+		});
+	}, [filteredInventory]);
+
 	const handleDelete = useCallback((sku: string) => {
-		setItemToDelete(sku);
+		setItemsToDelete([sku]);
 		setIsDeleteModalOpen(true);
 	}, []);
 
+	const handleBulkDelete = useCallback(() => {
+		setItemsToDelete((prev) =>
+			selectedSkus.length ? [...selectedSkus] : prev
+		);
+		if (selectedSkus.length) {
+			setIsDeleteModalOpen(true);
+		}
+	}, [selectedSkus]);
+
+	const handleCloseDeleteModal = useCallback(() => {
+		setIsDeleteModalOpen(false);
+		setItemsToDelete([]);
+	}, []);
+
 	const handleConfirmDelete = useCallback(() => {
+		if (itemsToDelete.length === 0) {
+			return;
+		}
+
+		const deletingSkus = [...itemsToDelete];
 		setInventory((prev) =>
-			prev.filter((item) => item.sku !== itemToDelete)
+			prev.filter((item) => !deletingSkus.includes(item.sku))
+		);
+		setSelectedSkus((prev) =>
+			prev.filter((sku) => !deletingSkus.includes(sku))
 		);
 		setIsDeleteModalOpen(false);
-		setItemToDelete('');
+		setItemsToDelete([]);
 
-		toast.success(`${itemToDelete} has been successfully deleted.`);
-	}, [itemToDelete, toast]);
+		if (deletingSkus.length === 1) {
+			toast.success(`${deletingSkus[0]} has been successfully deleted.`);
+			return;
+		}
+
+		toast.success(
+			`${deletingSkus.length} sale orders have been successfully deleted.`
+		);
+	}, [itemsToDelete]);
 
 	// Removed handleSaveEdit; editing now happens on dedicated page in future
 
@@ -260,17 +390,35 @@ export default function InventoryPage() {
 		<div className="space-y-6">
 			<Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm">
 				<CardHeader>
-					<div className="flex justify-between items-center">
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 						<CardTitle className="text-white text-xl">
 							Sale Order
 						</CardTitle>
-						<Button
-							onClick={handleAddNew}
-							className="bg-purple-600 hover:bg-purple-700 text-white"
-						>
-							<Plus className="h-4 w-4 mr-1" />
-							Add Sale Order
-						</Button>
+						<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+							<div className="flex items-center gap-2">
+								<Button
+									variant="destructive"
+									onClick={handleBulkDelete}
+									disabled={selectedSkus.length === 0}
+									className="bg-red-600 hover:bg-red-700 disabled:bg-red-600/40 disabled:text-red-200/60"
+								>
+									<Trash2 className="h-4 w-4" />
+									Delete Selected
+								</Button>
+								{selectedSkus.length > 0 && (
+									<Badge className="bg-purple-900/70 text-purple-100 border border-purple-700/70">
+										{selectedSkus.length} selected
+									</Badge>
+								)}
+							</div>
+							<Button
+								onClick={handleAddNew}
+								className="bg-purple-600 hover:bg-purple-700 text-white"
+							>
+								<Plus className="h-4 w-4 mr-1" />
+								Add Sale Order
+							</Button>
+						</div>
 					</div>
 				</CardHeader>
 				<CardContent className="space-y-4">
@@ -326,6 +474,19 @@ export default function InventoryPage() {
 						<Table>
 							<TableHeader>
 								<TableRow className="bg-gray-800/50 border-gray-700 hover:bg-gray-800/50">
+									<TableHead className="w-12 text-gray-300">
+										<input
+											ref={selectAllRef}
+											type="checkbox"
+											onChange={handleToggleSelectAll}
+											checked={areAllFilteredSelected}
+											disabled={
+												filteredInventory.length === 0
+											}
+											className="h-4 w-4 cursor-pointer accent-purple-500"
+											aria-label="Select all sale orders"
+										/>
+									</TableHead>
 									<TableHead className="text-gray-300">
 										Document ID
 									</TableHead>
@@ -361,6 +522,19 @@ export default function InventoryPage() {
 										key={item.sku}
 										className="border-gray-700 hover:bg-gray-800/30"
 									>
+										<TableCell className="w-12 text-gray-300">
+											<input
+												type="checkbox"
+												checked={selectedSkus.includes(
+													item.sku
+												)}
+												onChange={() =>
+													handleToggleSelect(item.sku)
+												}
+												className="h-4 w-4 cursor-pointer accent-purple-500"
+												aria-label={`Select sale order ${item.sku}`}
+											/>
+										</TableCell>
 										<TableCell className="font-medium text-white">
 											{item.sku}
 										</TableCell>
@@ -401,11 +575,11 @@ export default function InventoryPage() {
 													size="sm"
 													variant="ghost"
 													onClick={() =>
-														handleDelete(item.sku)
+														handleView(item)
 													}
-													className="text-red-400 hover:text-red-300 hover:bg-red-600/20"
+													className="text-blue-400 hover:text-blue-300 hover:bg-blue-600/20"
 												>
-													<Trash2 className="h-4 w-4" />
+													<Eye className="h-4 w-4" />
 												</Button>
 											</div>
 										</TableCell>
@@ -423,9 +597,9 @@ export default function InventoryPage() {
 
 			<DeleteModal
 				isOpen={isDeleteModalOpen}
-				onClose={() => setIsDeleteModalOpen(false)}
+				onClose={handleCloseDeleteModal}
 				onConfirm={handleConfirmDelete}
-				itemSku={itemToDelete}
+				itemsToDelete={itemsToDelete}
 			/>
 		</div>
 	);

@@ -1,5 +1,3 @@
-'use client';
-
 export type SaleOrderItemRow = {
 	sn: number;
 	itemName: string;
@@ -51,10 +49,90 @@ export type SaleOrderDetail = {
 };
 
 const rows: SaleOrderItemRow[] = [
-	{ sn: 1, itemName: 'Kraft Paper..', description: '', bf: '14', width: '96.5..', length: '0.000', unit: 'CM', grain: 'Lo..', gsm: '80', reelPack: '6.00', weightSecUnit: '0.000', secUnit: '0.000', weightSku: '3450.000', tol: '', skuUnit: 'Kg.', rate: '25.000000', amount: '86250.00', oh: '', ad: '' },
-	{ sn: 2, itemName: 'Kraft Paper..', description: '', bf: '14', width: '91.5..', length: '0.000', unit: 'CM', grain: 'Lo..', gsm: '80', reelPack: '2.00', weightSecUnit: '0.000', secUnit: '0.000', weightSku: '1700.000', tol: '', skuUnit: 'Kg.', rate: '25.000000', amount: '42500.00', oh: '', ad: '' },
-	{ sn: 3, itemName: 'Kraft Paper..', description: '', bf: '14', width: '101..', length: '0.000', unit: 'CM', grain: 'Lo..', gsm: '80', reelPack: '2.00', weightSecUnit: '0.000', secUnit: '0.000', weightSku: '1250.000', tol: '', skuUnit: 'Kg.', rate: '25.000000', amount: '31250.00', oh: '', ad: '' },
-	{ sn: 4, itemName: 'Kraft Paper..', description: '', bf: '14', width: '107..', length: '0.000', unit: 'CM', grain: 'Lo..', gsm: '80', reelPack: '4.00', weightSecUnit: '0.000', secUnit: '0.000', weightSku: '2580.000', tol: '', skuUnit: 'Kg.', rate: '25.000000', amount: '64500.00', oh: '', ad: '' },
+	{
+		sn: 1,
+		itemName: 'Kraft Paper..',
+		description: '',
+		bf: '14',
+		width: '96.5..',
+		length: '0.000',
+		unit: 'CM',
+		grain: 'Lo..',
+		gsm: '80',
+		reelPack: '6.00',
+		weightSecUnit: '0.000',
+		secUnit: '0.000',
+		weightSku: '3450.000',
+		tol: '',
+		skuUnit: 'Kg.',
+		rate: '25.000000',
+		amount: '86250.00',
+		oh: '',
+		ad: '',
+	},
+	{
+		sn: 2,
+		itemName: 'Kraft Paper..',
+		description: '',
+		bf: '14',
+		width: '91.5..',
+		length: '0.000',
+		unit: 'CM',
+		grain: 'Lo..',
+		gsm: '80',
+		reelPack: '2.00',
+		weightSecUnit: '0.000',
+		secUnit: '0.000',
+		weightSku: '1700.000',
+		tol: '',
+		skuUnit: 'Kg.',
+		rate: '25.000000',
+		amount: '42500.00',
+		oh: '',
+		ad: '',
+	},
+	{
+		sn: 3,
+		itemName: 'Kraft Paper..',
+		description: '',
+		bf: '14',
+		width: '101..',
+		length: '0.000',
+		unit: 'CM',
+		grain: 'Lo..',
+		gsm: '80',
+		reelPack: '2.00',
+		weightSecUnit: '0.000',
+		secUnit: '0.000',
+		weightSku: '1250.000',
+		tol: '',
+		skuUnit: 'Kg.',
+		rate: '25.000000',
+		amount: '31250.00',
+		oh: '',
+		ad: '',
+	},
+	{
+		sn: 4,
+		itemName: 'Kraft Paper..',
+		description: '',
+		bf: '14',
+		width: '107..',
+		length: '0.000',
+		unit: 'CM',
+		grain: 'Lo..',
+		gsm: '80',
+		reelPack: '4.00',
+		weightSecUnit: '0.000',
+		secUnit: '0.000',
+		weightSku: '2580.000',
+		tol: '',
+		skuUnit: 'Kg.',
+		rate: '25.000000',
+		amount: '64500.00',
+		oh: '',
+		ad: '',
+	},
 ];
 
 const template: Omit<SaleOrderDetail, 'id'> = {
@@ -90,5 +168,3 @@ export const saleOrdersById: Record<string, SaleOrderDetail> = {
 	'DMZSOGST 2021 12': { id: 'DMZSOGST 2021 12', ...template },
 	'DMZSOGST 2021 04': { id: 'DMZSOGST 2021 04', ...template },
 };
-
-
